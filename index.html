@@ -2,116 +2,245 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Paris – Lycées → collèges secteur 1 — màj 2026 & diff 2025→2026 (par l'UL12)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Paris – Lycées → collèges secteur 1 (carte interactive, par l'UL12)</title>
 
-  <!-- Leaflet via CDN : aucune installation de module -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <style>
-    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    #app { height: 100%; display: grid; grid-template-columns: 420px 1fr; }
-    #sidebar { border-right: 1px solid #ddd; padding: 12px; overflow: auto; }
-    #map { height: 100%; }
-    h1 { font-size: 16px; margin: 0 0 6px; }
-    .hint { font-size: 12px; color: #555; line-height: 1.35; margin-bottom: 10px; }
-    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .search { display:flex; gap:8px; margin: 10px 0 12px; }
-    input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 10px; }
-    button { padding: 8px 10px; border: 1px solid #ccc; background: #f7f7f7; border-radius: 10px; cursor:pointer; }
-    button:hover { background:#eee; }
-    button:disabled { cursor:not-allowed; opacity:.55; }
-    .card { padding: 10px; border: 1px solid #eee; border-radius: 12px; margin-bottom: 10px; }
-    .card strong { display:block; }
-    .meta { font-size: 12px; color: #666; margin-top: 4px; }
-    .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #f2f2f2; border: 1px solid #e6e6e6; }
-    .warn { color:#8a2b2b; }
-    .ok { color:#1f6b3a; }
-    ul { margin: 6px 0 0; padding-left: 18px; }
-    li { margin: 2px 0; }
-    label.opt { font-size: 12px; color:#333; display:flex; gap:8px; align-items:center; }
+    :root{
+      --border:#ddd;
+      --muted:#666;
+      --bg:#fff;
+      --chip:#f2f2f2;
+      --card:#fff;
+      --shadow: 0 10px 30px rgba(0,0,0,.12);
+      --radius: 14px;
+      --tap: 44px;
+      --accent:#14253C;
+    }
+
+    html, body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); }
+    #app { height:100%; display:grid; grid-template-columns: 420px 1fr; }
+    #sidebar { border-right:1px solid var(--border); padding: 12px; overflow:auto; background: var(--bg); }
+    #map { height:100%; width:100%; }
+
+    .hint{ font-size:12px; color:#555; line-height:1.35; margin-bottom:10px; }
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .search{ display:flex; gap:8px; margin: 10px 0 12px; }
+    input[type="text"]{
+      width:100%;
+      padding: 10px 12px;
+      border:1px solid #ccc;
+      border-radius: 12px;
+      font-size: 14px;
+      height: var(--tap);
+      box-sizing: border-box;
+    }
+    button{
+      padding: 10px 12px;
+      border:1px solid #ccc;
+      background:#f7f7f7;
+      border-radius: 12px;
+      cursor:pointer;
+      height: var(--tap);
+      font-size: 14px;
+    }
+    button:hover{ background:#eee; }
+    button:disabled{ cursor:not-allowed; opacity:.55; }
+
+    .badge{
+      font-size:12px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid #e6e6e6;
+    }
+    .warn{ color:#8a2b2b; }
+    .ok{ color:#1f6b3a; }
+
+    /* Cards */
+    .card{
+      padding: 12px;
+      border: 1px solid #eee;
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      background: var(--card);
+    }
+    .card.selected{
+      border-color: rgba(20,37,60,.35);
+      box-shadow: 0 6px 18px rgba(20,37,60,.12);
+    }
+    .card strong{ display:block; font-size:14px; cursor:pointer; }
+    .meta{ font-size:12px; color: var(--muted); margin-top:4px; }
+
+    /* Compact rows */
+    .compactRow{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      padding: 10px 12px;
+      border: 1px solid #eee;
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      background: var(--card);
+      cursor:pointer;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .compactRow.selected{
+      border-color: rgba(20,37,60,.35);
+      box-shadow: 0 6px 18px rgba(20,37,60,.12);
+    }
+    .compactRow .name{ font-weight:700; font-size:14px; }
+    .compactRow .count{ font-size:12px; color: var(--muted); background: var(--chip); padding: 3px 10px; border-radius:999px; border: 1px solid #e6e6e6; }
+
+    ul{ margin: 6px 0 0; padding-left: 18px; }
+    li{ margin: 2px 0; }
+    label.opt{ font-size: 12px; color:#333; display:flex; gap:10px; align-items:center; }
+    label.opt input{ transform: scale(1.1); }
+
+    /* Selected detail panel */
+    .detail{
+      border: 1px solid #eee;
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #fafafa;
+      margin-bottom: 10px;
+    }
+    .detail .title{ font-weight:800; font-size:14px; margin-bottom: 6px; }
+    .detail .sub{ font-size:12px; color: var(--muted); margin-bottom: 8px; }
+    .detail .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+
+    /* Inline detail (stays in alphabetical list) */
+    .inlineDetail{
+      margin: -6px 0 12px;
+      border: 1px solid #eee;
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      background: #fafafa;
+    }
+    .inlineDetail .sub{ font-size:12px; color: var(--muted); margin-bottom: 8px; }
+    .inlineDetail .actions{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 8px; }
+
+    /* Leaflet popup ergonomics */
+    .leaflet-popup-content { margin: 10px 12px; }
+    .leaflet-popup-content-wrapper { border-radius: 14px; }
+    .leaflet-container a.leaflet-popup-close-button { width: 34px; height: 34px; font-size: 20px; }
+
+    /* ------- Diff 2025 → 2026 (overlay) ------- */
     .tag-new { color:#1f6b3a; font-style:italic; font-size:11px; margin-left:6px; letter-spacing:.2px; }
     li.removed { color:#b33; text-decoration: line-through; }
     li.new .coll-name { color:#1f6b3a; font-weight:600; }
-    .card.retired strong { color:#b33; text-decoration: line-through; }
+    .card.retired strong, .card.retired .card-title { color:#b33; text-decoration: line-through; }
+    .compactRow.retired .name { color:#b33; text-decoration: line-through; }
     .badge-new { background:#e6f4ea; border-color:#b7dfc4; color:#1f6b3a; }
     .badge-rem { background:#fdecea; border-color:#f4c7c3; color:#b33; }
     .badge-retired { background:#fdecea; border-color:#f4c7c3; color:#b33; font-weight:600; }
-    .legend { font-size: 11px; color:#444; line-height:1.5; margin: 6px 0 10px; padding:8px; border:1px dashed #ddd; border-radius:10px; background:#fafafa; }
-    .legend .sw-new { color:#1f6b3a; font-style:italic; }
-    .legend .sw-rem { color:#b33; text-decoration: line-through; }
+    .legend-diff { font-size: 11px; color:#444; line-height:1.5; margin: 0 0 10px; padding:8px 10px; border:1px dashed #ddd; border-radius:10px; background:#fafafa; }
+    .legend-diff .sw-new { color:#1f6b3a; font-style:italic; font-weight:600; }
+    .legend-diff .sw-rem { color:#b33; text-decoration: line-through; }
+    .retired-banner { margin-top:6px; padding:4px 8px; background:#fdecea; border:1px solid #f4c7c3; color:#b33; font-weight:600; border-radius:8px; font-size:12px; display:inline-block; }
 
-    /* --- Mobile / tablettes étroites : carte en haut (fixe), sidebar en dessous (scroll) --- */
-    @media (max-width: 820px) {
-      #app {
-        grid-template-columns: 1fr;
-        grid-template-rows: 45vh 1fr;
-      }
-      #sidebar {
+    /* Mobile bottom sheet */
+    @media (max-width: 900px){
+      #app{ grid-template-columns: 1fr; }
+      #sidebar{
+        position: fixed;
+        left: 0; right: 0;
+        bottom: 0;
         border-right: none;
-        border-top: 1px solid #ddd;
-        padding: 10px;
+        border-top: 1px solid var(--border);
+        border-radius: 18px 18px 0 0;
+        box-shadow: var(--shadow);
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+        max-height: 72vh;
+        overflow: hidden;
+        z-index: 1000;
       }
-      #map { min-height: 45vh; }
-      button { min-height: 38px; padding: 9px 12px; }
-      input[type="text"] { padding: 10px; font-size: 14px; }
-      h1 { font-size: 15px; }
-      .card { padding: 12px; }
-      .leaflet-popup-content { margin: 10px 12px; font-size: 13px; }
+      #sidebar.collapsed{ max-height: 64px; overflow: hidden; }
+      .sheet-head{ display:flex; align-items:center; justify-content: space-between; gap: 10px; padding: 6px 2px 10px; }
+      .grabber{ width: 46px; height: 5px; border-radius: 999px; background: #d8d8d8; margin: 0 auto 6px; }
+      .sheet-title{ display:flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; user-select:none; -webkit-tap-highlight-color: transparent; }
+      .sheet-title .t{ font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .sheet-title .s{ font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .sheet-actions{ display:flex; gap: 8px; align-items: center; }
+      .iconbtn{ width: 44px; height: 44px; padding: 0; border-radius: 14px; display:flex; align-items:center; justify-content:center; user-select: none; -webkit-tap-highlight-color: transparent; }
+      #sidebar .sheet-body{ overflow:auto; max-height: calc(72vh - 64px); padding-right: 2px; }
+      #sidebar.collapsed .sheet-body{ display:none; }
+      button{ height: 46px; border-radius: 14px; }
+      input[type="text"]{ height: 46px; border-radius: 14px; }
     }
   </style>
 </head>
 
 <body>
 <div id="app">
-  <div id="sidebar">
-    <h1>Paris – Lycées → collèges secteur 1, par l'UL12 <br/><span style="font-size: 75%">[sur une idée originale d'A.T. ;)]</span><br/><span style="font-size: 80%; color:#555;">Mise à jour 2026 · diff 2025 → 2026</span></h1>
-    <div class="hint">
-      Fichier HTML unique, consultable en local.<br/> 
+  <div id="sidebar" class="collapsed">
+    <div class="grabber" id="grabber" aria-hidden="true"></div>
+
+    <div class="sheet-head">
+      <div class="sheet-title" role="button" id="toggleSheet" aria-label="Ouvrir/fermer le panneau">
+        <div class="t">Lycées de Paris → collèges (secteur 1), par l'UL12<br/><span style="font-size: 75%">[sur une idée originale d'A.T. ;)]</span></h1></div>
+        <div class="s" id="subtitle">Tape pour rechercher & sélectionner</div>
+      </div>
+      <div class="sheet-actions">
+        <button class="iconbtn" id="btnLocate" title="Recentrer sur Paris" aria-label="Recentrer sur Paris">⌖</button>
+        <button class="iconbtn" id="btnCollapse" title="Réduire/agrandir" aria-label="Réduire/agrandir">▴</button>
+      </div>
+    </div>
+
+    <div class="sheet-body">
+      <div class="hint" style="margin-top:0;">
+        HTML unique, consultable en local. Positions : JSON (dép. 75). Fond OpenStreetMap : connexion requise.<br/> 
 	  <span style="color:red">DISCLAIMER : Données récupérées automatiquement via des sources publiques, <strong>non vérifiées manuellement. Si vous constatez une erreur, remontez-la svp à l'UL12</strong></span>.<br/>
-      Positions des lycées : export JSON (dép. 75).<br/>
-      Fond de carte OpenStreetMap : nécessite une connexion (sinon la carte peut rester blanche).
-	  
-																																																					   
-    </div>
-    <div class="legend">
-      <strong>Légende diff 2025 → 2026</strong><br/>
-      COLLEGE <span class="sw-new">NEW 2026</span> &nbsp;: collège qui alimente ce lycée en 2026 mais pas en 2025.<br/>
-      <span class="sw-rem">COLLEGE</span> &nbsp;: collège qui alimentait ce lycée en 2025 mais plus en 2026.<br/>
-      Lycée barré en rouge : lycée retiré du secteur 1 en 2026.
-    </div>
+      </div>
 
-    <div class="row" style="margin-bottom:10px;">
-      <span class="badge">Lycées affichés: <span id="countShown">0</span></span>
-      <span class="badge">Total: <span id="countTotal">0</span></span>
-      <span class="badge badge-new" title="Nouvelles affectations collège→lycée en 2026">+ <span id="countNew">0</span> new</span>
-      <span class="badge badge-rem" title="Affectations retirées (2025 → 2026)"><span id="countRem">0</span> retirées</span>
-    </div>
+      <div class="legend-diff">
+        <strong>Mise à jour 2026 · diff 2025 → 2026</strong><br/>
+        COLLEGE <span class="sw-new">NEW 2026</span> : nouveau collège affecté à ce lycée en 2026.<br/>
+        <span class="sw-rem">COLLEGE</span> : collège qui n'alimente plus ce lycée en 2026.<br/>
+        Lycée barré en rouge : lycée retiré du secteur 1 en 2026.
+      </div>
 
-    <div class="row" style="margin-bottom:8px;">
-      <!-- OPTION 1 -->
-      <label class="opt" title="Quand tu cliques sur un lycée (liste/marker), la popup s'ouvre automatiquement.">
-        <input type="checkbox" id="optAutoPopup" checked />
-        Option 1 : ouvrir directement la popup
-      </label>
-    </div>
-    <div class="row" style="margin-bottom:10px;">
-      <!-- OPTION 2 -->
-      <label class="opt" title="Si un lycée n'est pas géolocalisé, on affiche la liste des collèges directement sous son nom dans la liste.">
-        <input type="checkbox" id="optInlineMissing" checked />
-        Option 2 : afficher les collèges sous le nom si non géolocalisé
-      </label>
-    </div>
+      <div class="row" style="margin-bottom:10px;">
+        <span class="badge">Affichés: <span id="countShown">0</span></span>
+        <span class="badge">Total: <span id="countTotal">0</span></span>
+        <span class="badge badge-new" title="Nouvelles affectations 2026">+ <span id="countNew">0</span> new</span>
+        <span class="badge badge-rem" title="Affectations retirées 2025 → 2026"><span id="countRem">0</span> retirées</span>
+      </div>
 
-    <div class="search">
-      <input id="filter" type="text" placeholder="Filtrer un lycée (ex: CONDORCET)"/>
-      <button id="reset">Reset</button>
-    </div>
+      <div class="row" style="margin-bottom:8px;">
+        <label class="opt">
+          <input type="checkbox" id="optAutoPopup" checked />
+          Ouvrir directement la popup (option 1)
+        </label>
+      </div>
+      <div class="row" style="margin-bottom:8px;">
+        <label class="opt">
+          <input type="checkbox" id="optInlineMissing" checked />
+          Afficher collèges sous le nom si non géolocalisé (option 2)
+        </label>
+      </div>
+      <div class="row" style="margin-bottom:12px;">
+        <label class="opt" title="Affiche une liste compacte (nom + nombre). Les collèges du lycée sélectionné s'affichent en haut.">
+          <input type="checkbox" id="optCompact" />
+          Mode liste compacte (option)
+        </label>
+      </div>
 
-    <div id="list"></div>
+      <div id="selectedDetail" class="detail" style="display:none;"></div>
+
+      <div class="search">
+        <input id="filter" type="text" placeholder="Rechercher un lycée (ex: CONDORCET)"/>
+        <button id="reset">Reset</button>
+      </div>
+
+      <div id="list"></div>
+    </div>
   </div>
 
   <div id="map"></div>
@@ -131,34 +260,39 @@
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  // Diff 2025 → 2026 : rendu d'une liste d'items {n, s:'kept'|'new'|'removed'}
   function renderCollItems(arr) {
     return (arr || []).map(c => {
+      if (!c || typeof c === 'string') return `<li>${escapeHtml(c)}</li>`;
       if (c.s === "new") {
         return `<li class="new"><span class="coll-name">${escapeHtml(c.n)}</span><span class="tag-new">NEW 2026</span></li>`;
       } else if (c.s === "removed") {
         return `<li class="removed">${escapeHtml(c.n)}</li>`;
-      } else {
-        return `<li>${escapeHtml(c.n)}</li>`;
       }
+      return `<li>${escapeHtml(c.n)}</li>`;
     }).join("");
   }
+  function count2026(arr) { return (arr || []).filter(c => c && (c.s === "kept" || c.s === "new")).length; }
+  function countNew(arr)  { return (arr || []).filter(c => c && c.s === "new").length; }
+  function countRem(arr)  { return (arr || []).filter(c => c && c.s === "removed").length; }
 
   function popupHtml(p) {
     const cols = p.colleges_diff || [];
     const items = renderCollItems(cols);
-    const nb = (p.nb_colleges || 0);
-    const nbNew = (p.nb_new || 0);
-    const nbRem = (p.nb_removed || 0);
+    const nb = p.nb_colleges || 0;
+    const nbN = p.nb_new || 0;
+    const nbR = p.nb_removed || 0;
     const retiredBanner = p.lycee_retired_2026
-      ? `<div style="margin-top:6px; padding:4px 6px; background:#fdecea; border:1px solid #f4c7c3; color:#b33; font-weight:600; border-radius:6px; font-size:12px;">Lycée retiré du secteur 1 en 2026</div>`
+      ? `<div class="retired-banner">Lycée retiré du secteur 1 en 2026</div>`
       : "";
     const deltaBits = [];
-    if (nbNew) deltaBits.push(`<span class="tag-new" style="margin-left:0;">+${nbNew} NEW 2026</span>`);
-    if (nbRem) deltaBits.push(`<span style="color:#b33; font-size:11px;">−${nbRem} retiré${nbRem>1?"s":""}</span>`);
+    if (nbN) deltaBits.push(`<span class="tag-new" style="margin-left:0;">+${nbN} NEW 2026</span>`);
+    if (nbR) deltaBits.push(`<span style="color:#b33; font-size:11px;">−${nbR} retiré${nbR>1?"s":""}</span>`);
     const delta = deltaBits.length ? ` · ${deltaBits.join(" · ")}` : "";
+    const titleStyle = p.lycee_retired_2026 ? 'color:#b33; text-decoration:line-through;' : '';
     return `
       <div style="max-width:360px;">
-        <div style="font-weight:800; margin-bottom:4px; ${p.lycee_retired_2026 ? 'color:#b33; text-decoration:line-through;' : ''}">${escapeHtml(p.lycee_csv)}</div>
+        <div style="font-weight:800; margin-bottom:4px; ${titleStyle}">${escapeHtml(p.lycee_csv)}</div>
         <div style="font-size:12px; color:#555;">
           ${escapeHtml(p.nom_etablissement || "")}<br/>
           <span style="color:#666;">${escapeHtml(p.adresse || "")}</span><br/>
@@ -170,26 +304,26 @@
       </div>`;
   }
 
-  // Custom red/greyed icon for lycees retired from sector 1 in 2026
+  // Icône rouge pour les lycées retirés du secteur 1 en 2026
   const retiredIcon = L.divIcon({
     className: 'retired-marker',
-    html: '<div style="width:16px;height:16px;border-radius:50%;background:#b33;border:3px solid #fff;box-shadow:0 0 0 1px #b33;opacity:0.85;"></div>',
-    iconSize: [16,16],
-    iconAnchor: [8,8],
-    popupAnchor: [0,-8]
+    html: '<div style="width:18px;height:18px;border-radius:50%;background:#b33;border:3px solid #fff;box-shadow:0 0 0 1px #b33, 0 2px 6px rgba(0,0,0,.35);"></div>',
+    iconSize: [18,18],
+    iconAnchor: [9,9],
+    popupAnchor: [0,-10]
   });
 
-  const markersByLycee = new Map(); // key upper lycee_csv
+  const markersByLycee = new Map();
   const layer = L.geoJSON(GEO, {
     pointToLayer: (feature, latlng) => {
       if (feature.properties && feature.properties.lycee_retired_2026) {
-        return L.marker(latlng, { icon: retiredIcon, opacity: 0.9 });
+        return L.marker(latlng, { icon: retiredIcon, opacity: 0.95 });
       }
       return L.marker(latlng);
     },
     onEachFeature: (feature, leafletLayer) => {
       const p = feature.properties;
-      leafletLayer.bindPopup(popupHtml(p), { maxWidth: 320, autoPan: true, keepInView: true });
+      leafletLayer.bindPopup(popupHtml(p));
       markersByLycee.set((p.lycee_csv || "").toUpperCase(), { layer: leafletLayer, props: p });
     }
   }).addTo(map);
@@ -197,109 +331,288 @@
   try {
     const b = layer.getBounds();
     if (b.isValid()) map.fitBounds(b.pad(0.08));
-  } catch(e) {}
+  } catch(e){}
 
-  // Sidebar rendering
   const listEl = document.getElementById("list");
   const filterEl = document.getElementById("filter");
   const optAutoPopup = document.getElementById("optAutoPopup");
   const optInlineMissing = document.getElementById("optInlineMissing");
+  const optCompact = document.getElementById("optCompact");
+  const selectedDetail = document.getElementById("selectedDetail");
+  const subtitle = document.getElementById("subtitle");
+
   const allLycees = Object.keys(LYCEE_TO_COLLEGES).sort((a,b)=>a.localeCompare(b,'fr'));
-  const RETIRED_LYCEES = new Set(GEO.features.filter(f => f.properties.lycee_retired_2026).map(f => (f.properties.lycee_csv || "").toUpperCase()));
+  const RETIRED = new Set(GEO.features.filter(f => f.properties.lycee_retired_2026).map(f => (f.properties.lycee_csv||"").toUpperCase()));
+  let selectedLycee = null;
 
   function collegesInlineHtml(lycee) {
     const cols = (LYCEE_TO_COLLEGES[lycee] || []);
     if (!cols.length) return "";
     const items = renderCollItems(cols);
-    return `<ul style="margin-top:6px; max-height:160px; overflow:auto;">${items}</ul>`;
+    return `<ul style="margin-top:8px; max-height:160px; overflow:auto;">${items}</ul>`;
+  }
+
+  function isMobile() {
+    return window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+  }
+
+  function setSelected(lycee) {
+    selectedLycee = lycee;
+    renderList(); // update highlights
+    if (lycee) subtitle.textContent = `${lycee} sélectionné`;
+    else subtitle.textContent = "Tape pour rechercher & sélectionner";
+  }
+
+  function renderSelectedDetail() { /* deprecated: inline selection */ }
+
+  function maybeCollapseAfterPick() {
+    if (isMobile()) setSheetCollapsed(true);
   }
 
   function renderList() {
+    const scroller = document.querySelector("#sidebar .sheet-body");
+    const prevScroll = scroller ? scroller.scrollTop : 0;
     const q = (filterEl.value || "").trim().toUpperCase();
     listEl.innerHTML = "";
 
     const shown = allLycees.filter(l => !q || l.toUpperCase().includes(q));
     document.getElementById("countShown").textContent = shown.length;
     document.getElementById("countTotal").textContent = allLycees.length;
-    let totalNew = 0, totalRem = 0;
+
+    // Compteurs diff (limités aux lycées affichés)
+    let _totalNew = 0, _totalRem = 0;
     for (const L of shown) {
-      const c = LYCEE_TO_COLLEGES[L] || [];
-      for (const x of c) {
-        if (x.s === "new") totalNew++;
-        else if (x.s === "removed") totalRem++;
+      for (const c of (LYCEE_TO_COLLEGES[L] || [])) {
+        if (c.s === "new") _totalNew++;
+        else if (c.s === "removed") _totalRem++;
       }
     }
-    document.getElementById("countNew").textContent = totalNew;
-    document.getElementById("countRem").textContent = totalRem;
+    document.getElementById("countNew").textContent = _totalNew;
+    document.getElementById("countRem").textContent = _totalRem;
 
     if (!shown.length) {
       listEl.innerHTML = `<div class="hint">Aucun lycée ne correspond au filtre.</div>`;
       return;
     }
 
+    const compact = optCompact.checked;
+
     for (const lycee of shown) {
       const m = markersByLycee.get(lycee.toUpperCase());
       const hasGeo = !!m;
-      const isRetired = RETIRED_LYCEES.has(lycee.toUpperCase());
-
       const cols = LYCEE_TO_COLLEGES[lycee] || [];
-      const nbKept = cols.filter(c => c.s === "kept").length;
-      const nbNew = cols.filter(c => c.s === "new").length;
-      const nbRem = cols.filter(c => c.s === "removed").length;
-      const nb2026 = nbKept + nbNew;
+      const nb2026 = count2026(cols);
+      const nbN = countNew(cols);
+      const nbR = countRem(cols);
+      const isRetired = RETIRED.has(lycee.toUpperCase());
+
+      const isSel = selectedLycee && lycee === selectedLycee;
+
+      if (compact) {
+        const row = document.createElement("div");
+        row.className = "compactRow" + (isSel ? " selected" : "") + (isRetired ? " retired" : "");
+        const countLabel = isRetired
+          ? `${nbR} retiré${nbR>1?"s":""} 2026`
+          : `${nb2026} collège(s)${nbN?` <span class="tag-new" style="margin-left:4px;">+${nbN}</span>`:''}`;
+        row.innerHTML = `
+          <div class="name">${escapeHtml(lycee)}</div>
+          <div class="count">${countLabel}</div>
+        `;
+        row.addEventListener("pointerup", (e) => {
+          e.stopPropagation();
+          setSelected(lycee);
+          if (hasGeo) {
+            const ll = m.layer.getLatLng();
+            map.setView(ll, 14);
+            if (optAutoPopup.checked) m.layer.openPopup();
+          }
+          maybeCollapseAfterPick();
+        });
+        listEl.appendChild(row);
+
+        // Détails inline (évite de remonter en haut du volet)
+        if (isSel) {
+          const detail = document.createElement("div");
+          detail.className = "inlineDetail";
+          const items = renderCollItems(cols);
+          const retiredLine = isRetired ? `<div class="retired-banner">Lycée retiré du secteur 1 en 2026</div>` : "";
+          const diffBits = [];
+          if (nbN) diffBits.push(`<span class="tag-new" style="margin-left:0;">+${nbN} NEW 2026</span>`);
+          if (nbR) diffBits.push(`<span style="color:#b33; font-size:11px;">−${nbR} retiré${nbR>1?"s":""}</span>`);
+          const diffStr = diffBits.length ? ` · ${diffBits.join(" · ")}` : "";
+          detail.innerHTML = `
+            ${retiredLine}
+            <div class="sub">Collèges secteur 1 2026 : <strong>${nb2026}</strong>${diffStr}</div>
+            <div class="actions">
+              <button data-action="focus" ${hasGeo ? "" : "disabled"}>Centrer</button>
+              <button data-action="open" ${hasGeo ? "" : "disabled"}>Ouvrir</button>
+              <button data-action="clear">Désélectionner</button>
+            </div>
+            <ul style="max-height:220px; overflow:auto; margin:0; padding-left:18px;">${items}</ul>
+          `;
+          // Bind actions
+          const bFocus = detail.querySelector('[data-action="focus"]');
+          const bOpen  = detail.querySelector('[data-action="open"]');
+          const bClear = detail.querySelector('[data-action="clear"]');
+
+          if (hasGeo) {
+            bFocus.addEventListener("pointerup", (e) => {
+              e.stopPropagation();
+              const ll = m.layer.getLatLng();
+              map.setView(ll, 14);
+              if (optAutoPopup.checked) m.layer.openPopup();
+              if (isMobile()) setSheetCollapsed(true);
+            });
+            bOpen.addEventListener("pointerup", (e) => {
+              e.stopPropagation();
+              const ll = m.layer.getLatLng();
+              map.setView(ll, 14);
+              m.layer.openPopup();
+              if (isMobile()) setSheetCollapsed(true);
+            });
+          }
+          bClear.addEventListener("pointerup", (e) => {
+            e.stopPropagation();
+            setSelected(null);
+          });
+
+          // Prevent taps inside detail from closing sheet via map click
+          detail.addEventListener("click", (e) => e.stopPropagation());
+          listEl.appendChild(detail);
+        }
+        continue;
+      }
 
       const div = document.createElement("div");
-      div.className = "card" + (isRetired ? " retired" : "");
+      div.className = "card" + (isSel ? " selected" : "") + (isRetired ? " retired" : "");
 
       const inlineCols = (!hasGeo && optInlineMissing.checked) ? collegesInlineHtml(lycee) : "";
-      // For retired lycees, always show the inline list (so the reader sees what was there).
-      const forceInline = isRetired ? collegesInlineHtml(lycee) : "";
+      const selectedInlineDetail = (isSel) ? (() => {
+        const items = renderCollItems(cols);
+        const retiredLine = isRetired ? `<div class="retired-banner">Lycée retiré du secteur 1 en 2026</div>` : "";
+        const diffBits = [];
+        if (nbN) diffBits.push(`<span class="tag-new" style="margin-left:0;">+${nbN} NEW 2026</span>`);
+        if (nbR) diffBits.push(`<span style="color:#b33; font-size:11px;">−${nbR} retiré${nbR>1?"s":""}</span>`);
+        const diffStr = diffBits.length ? ` · ${diffBits.join(" · ")}` : "";
+        return `
+          <div class="inlineDetail">
+            ${retiredLine}
+            <div class="sub">Collèges secteur 1 2026 : <strong>${nb2026}</strong>${diffStr}</div>
+            <div class="actions">
+              <button data-action="selfocus" ${hasGeo ? "" : "disabled"}>Centrer</button>
+              <button data-action="selopen" ${hasGeo ? "" : "disabled"}>Ouvrir</button>
+              <button data-action="selclear">Désélectionner</button>
+            </div>
+            <ul style="max-height:220px; overflow:auto; margin:0; padding-left:18px;">${items}</ul>
+          </div>
+        `;
+      })() : "";
 
-      const retiredBadge = isRetired ? '<span class="badge badge-retired" title="Plus en secteur 1 en 2026">Retiré 2026</span>' : "";
-      const newBadge = nbNew ? `<span class="badge badge-new">+${nbNew} NEW</span>` : "";
-      const remBadge = nbRem ? `<span class="badge badge-rem">−${nbRem}</span>` : "";
+      const metaBadges = [
+        isRetired ? '<span class="badge badge-retired" title="Plus en secteur 1 en 2026">Retiré 2026</span>' : '',
+        nbN ? `<span class="badge badge-new">+${nbN} NEW</span>` : '',
+        nbR && !isRetired ? `<span class="badge badge-rem">−${nbR}</span>` : ''
+      ].filter(Boolean).join(' ');
 
       div.innerHTML = `
         <strong>${escapeHtml(lycee)}</strong>
         <div class="meta">
           ${hasGeo ? '<span class="ok">géolocalisé</span>' : '<span class="warn">non géolocalisé</span>'}
           • collèges 2026 : ${nb2026}
-          ${retiredBadge}
-          ${newBadge}
-          ${remBadge}
+          ${metaBadges ? '&nbsp; ' + metaBadges : ''}
         </div>
-        <div class="row" style="margin-top:8px;">
+        <div class="row" style="margin-top:10px;">
           <button data-action="focus" ${hasGeo ? "" : "disabled"}>Centrer</button>
           <button data-action="open" ${hasGeo ? "" : "disabled"}>Ouvrir</button>
+          <button data-action="select">Sélectionner</button>
         </div>
         ${inlineCols}
-        ${forceInline}
+        ${selectedInlineDetail}
       `;
+
+      const title = div.querySelector("strong");
+      title.addEventListener("pointerup", (e) => {
+        e.stopPropagation();
+        setSelected(lycee);
+        if (hasGeo) {
+          const ll = m.layer.getLatLng();
+          map.setView(ll, 14);
+          if (optAutoPopup.checked) m.layer.openPopup();
+          maybeCollapseAfterPick();
+        }
+      });
 
       const btnFocus = div.querySelector('[data-action="focus"]');
       const btnOpen = div.querySelector('[data-action="open"]');
+      const btnSelect = div.querySelector('[data-action="select"]');
 
-      if (hasGeo) {
-        btnFocus.addEventListener("click", () => {
+      btnSelect.addEventListener("pointerup", (e) => {
+        e.stopPropagation();
+        setSelected(lycee);
+      });
+
+      // Actions du détail inline (si sélectionné)
+      const bSelFocus = div.querySelector('[data-action="selfocus"]');
+      const bSelOpen  = div.querySelector('[data-action="selopen"]');
+      const bSelClear = div.querySelector('[data-action="selclear"]');
+
+      if (bSelClear) {
+        bSelClear.addEventListener("pointerup", (e) => {
+          e.stopPropagation();
+          setSelected(null);
+        });
+      }
+      if (hasGeo && bSelFocus) {
+        bSelFocus.addEventListener("pointerup", (e) => {
+          e.stopPropagation();
           const ll = m.layer.getLatLng();
           map.setView(ll, 14);
-          if (optAutoPopup.checked) m.layer.openPopup(); // Option 1
+          if (optAutoPopup.checked) m.layer.openPopup();
+          if (isMobile()) setSheetCollapsed(true);
         });
-        btnOpen.addEventListener("click", () => {
+      }
+      if (hasGeo && bSelOpen) {
+        bSelOpen.addEventListener("pointerup", (e) => {
+          e.stopPropagation();
           const ll = m.layer.getLatLng();
           map.setView(ll, 14);
           m.layer.openPopup();
+          if (isMobile()) setSheetCollapsed(true);
+        });
+      }
+
+      if (hasGeo) {
+        btnFocus.addEventListener("pointerup", (e) => {
+          e.stopPropagation();
+          setSelected(lycee);
+          const ll = m.layer.getLatLng();
+          map.setView(ll, 14);
+          if (optAutoPopup.checked) m.layer.openPopup();
+          maybeCollapseAfterPick();
+        });
+        btnOpen.addEventListener("pointerup", (e) => {
+          e.stopPropagation();
+          setSelected(lycee);
+          const ll = m.layer.getLatLng();
+          map.setView(ll, 14);
+          m.layer.openPopup();
+          maybeCollapseAfterPick();
         });
       }
 
       listEl.appendChild(div);
     }
+
+    // Restaure la position de scroll (important sur mobile)
+    if (scroller) scroller.scrollTop = prevScroll;
   }
 
-  // Marker click behavior (Option 1)
+  // Marker click => select
   for (const v of markersByLycee.values()) {
     v.layer.on("click", () => {
+      setSelected(v.props.lycee_csv);
       if (optAutoPopup.checked) v.layer.openPopup();
+      if (isMobile()) setSheetCollapsed(true);
     });
   }
 
@@ -309,8 +622,69 @@
   });
   filterEl.addEventListener("input", renderList);
   optInlineMissing.addEventListener("change", renderList);
+  optCompact.addEventListener("change", renderList);
+
+  // Bottom sheet controls
+  const sidebar = document.getElementById("sidebar");
+  // Empêche les taps dans le volet de “tomber” sur la carte (utile sur mobile).
+  // (Leaflet + changements de viewport mobile peuvent sinon provoquer un repli intempestif.)
+  sidebar.addEventListener("click", (e) => e.stopPropagation());  const btnCollapse = document.getElementById("btnCollapse");
+  const toggleSheet = document.getElementById("toggleSheet");
+  const grabber = document.getElementById("grabber");
+  const btnLocate = document.getElementById("btnLocate");
+
+  function setSheetCollapsed(collapsed) {
+    if (!isMobile()) {
+      sidebar.classList.remove("collapsed");
+      btnCollapse.textContent = "▴";
+      return;
+    }
+    sidebar.classList.toggle("collapsed", collapsed);
+    btnCollapse.textContent = collapsed ? "▴" : "▾";
+    if (!collapsed) {
+      setTimeout(() => { try { filterEl.focus(); } catch(e){} }, 50);
+    }
+    setTimeout(() => map.invalidateSize(), 80);
+  }
+
+  function toggleCollapsed() {
+    setSheetCollapsed(!sidebar.classList.contains("collapsed"));
+  }
+
+  btnCollapse.addEventListener("click", toggleCollapsed);
+  toggleSheet.addEventListener("click", toggleCollapsed);
+  grabber.addEventListener("click", toggleCollapsed);
+
+  btnLocate.addEventListener("click", () => {
+    map.setView([48.8566, 2.3522], 12);
+    if (isMobile()) setSheetCollapsed(true);
+  });
+
+  function syncLayout(force = false) {
+    const nowMobile = isMobile();
+    if (force) {
+      // Initialisation / changement de breakpoint uniquement
+      if (nowMobile) setSheetCollapsed(true);
+      else setSheetCollapsed(false);
+    }
+    // Sur mobile, ne pas forcer le repli lors d'un resize (clavier, barre d'URL, etc.)
+    setTimeout(() => map.invalidateSize(), 120);
+  }
+  let __lastMobile = isMobile();
+  window.addEventListener("resize", () => {
+    const now = isMobile();
+    if (now !== __lastMobile) {
+      __lastMobile = now;
+      syncLayout(true);
+      return;
+    }
+    // Resize classique (clavier / UI navigateur) : on garde l'état du volet.
+    syncLayout(false);
+  });
+map.on("click", () => { if (isMobile()) setSheetCollapsed(true); });
 
   renderList();
+  syncLayout(true);
 </script>
 </body>
 </html>
