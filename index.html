@@ -145,6 +145,29 @@
     .legend-diff .sw-rem { color:#b33; text-decoration: line-through; }
     .retired-banner { margin-top:6px; padding:4px 8px; background:#fdecea; border:1px solid #f4c7c3; color:#b33; font-weight:600; border-radius:8px; font-size:12px; display:inline-block; }
 
+    /* Chips filtres rapides */
+    .chips { display:flex; gap:6px; margin: 2px 0 10px; flex-wrap:wrap; }
+    .chip {
+      height: 32px; padding: 0 12px; border-radius: 999px;
+      border: 1px solid #e0e0e0; background: #f2f2f2; color:#333;
+      font-size: 12px; cursor:pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .chip.active { background: var(--accent); color:#fff; border-color: var(--accent); }
+    .chip .tally { opacity:.75; margin-left:4px; }
+
+    /* Legend (collapsible) */
+    details.legend-diff { font-size: 11px; color:#444; line-height:1.5; margin: 0 0 10px; padding:8px 10px; border:1px dashed #ddd; border-radius:10px; background:#fafafa; }
+    details.legend-diff > summary { cursor:pointer; list-style:none; font-weight:600; user-select:none; -webkit-tap-highlight-color: transparent; }
+    details.legend-diff > summary::marker, details.legend-diff > summary::-webkit-details-marker { display:none; }
+    details.legend-diff > summary::after { content:" ▾"; color:#888; font-weight:normal; }
+    details.legend-diff[open] > summary::after { content:" ▴"; }
+    details.legend-diff .sw-new { color:#1f6b3a; font-style:italic; font-weight:600; }
+    details.legend-diff .sw-rem { color:#b33; text-decoration: line-through; }
+    details.legend-diff .body { margin-top:6px; }
+
+    /* Stats row (compactée) */
+    .stats-row { display:flex; gap:6px; margin: 0 0 10px; flex-wrap:wrap; }
+
     /* Mobile bottom sheet */
     @media (max-width: 900px){
       #app{ grid-template-columns: 1fr; }
@@ -199,18 +222,25 @@
 	  <span style="color:red">DISCLAIMER : Données récupérées automatiquement via des sources publiques, <strong>non vérifiées manuellement. Si vous constatez une erreur, remontez-la svp à l'UL12</strong></span>.<br/>
       </div>
 
-      <div class="legend-diff">
-        <strong>Mise à jour 2026 · diff 2025 → 2026</strong><br/>
-        COLLEGE <span class="sw-new">NEW 2026</span> : nouveau collège affecté à ce lycée en 2026.<br/>
-        <span class="sw-rem">COLLEGE</span> : collège qui n'alimente plus ce lycée en 2026.<br/>
-        Lycée barré en rouge : lycée retiré du secteur 1 en 2026.
+      <details class="legend-diff" id="legendDiff">
+        <summary>Mise à jour 2026 · diff 2025 → 2026</summary>
+        <div class="body">
+          COLLEGE <span class="sw-new">NEW 2026</span> : nouveau collège affecté à ce lycée en 2026.<br/>
+          <span class="sw-rem">COLLEGE</span> : collège qui n'alimente plus ce lycée en 2026.<br/>
+          Lycée barré en rouge : lycée retiré du secteur 1 en 2026.
+        </div>
+      </details>
+
+      <div class="row stats-row">
+        <span class="badge"><span id="countShown">0</span>/<span id="countTotal">0</span> lycées</span>
+        <span class="badge badge-new" title="Nouvelles affectations 2026">+<span id="countNew">0</span> NEW</span>
+        <span class="badge badge-rem" title="Affectations retirées 2025 → 2026">−<span id="countRem">0</span> retirés</span>
       </div>
 
-      <div class="row" style="margin-bottom:10px;">
-        <span class="badge">Affichés: <span id="countShown">0</span></span>
-        <span class="badge">Total: <span id="countTotal">0</span></span>
-        <span class="badge badge-new" title="Nouvelles affectations 2026">+ <span id="countNew">0</span> new</span>
-        <span class="badge badge-rem" title="Affectations retirées 2025 → 2026"><span id="countRem">0</span> retirées</span>
+      <div class="chips" id="chips" role="tablist" aria-label="Filtres rapides">
+        <button class="chip active" data-chip="all" role="tab" aria-selected="true">Tous</button>
+        <button class="chip" data-chip="changes" role="tab" aria-selected="false">Avec changements 2026</button>
+        <button class="chip" data-chip="retired" role="tab" aria-selected="false">Retirés</button>
       </div>
 
       <div class="row" style="margin-bottom:8px;">
@@ -260,6 +290,9 @@
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  // Message spécifique pour les lycées retirés du secteur 1 en 2026 (cas RABELAIS)
+  const RETIRED_MSG = "Lycée définitivement fermé à la rentrée 2026 → Disparition du dernier lycée public du 18e.";
+
   // Diff 2025 → 2026 : rendu d'une liste d'items {n, s:'kept'|'new'|'removed'}
   function renderCollItems(arr) {
     return (arr || []).map(c => {
@@ -283,7 +316,7 @@
     const nbN = p.nb_new || 0;
     const nbR = p.nb_removed || 0;
     const retiredBanner = p.lycee_retired_2026
-      ? `<div class="retired-banner">Lycée retiré du secteur 1 en 2026</div>`
+      ? `<div class="retired-banner">${escapeHtml(RETIRED_MSG)}</div>`
       : "";
     const deltaBits = [];
     if (nbN) deltaBits.push(`<span class="tag-new" style="margin-left:0;">+${nbN} NEW 2026</span>`);
@@ -344,6 +377,7 @@
   const allLycees = Object.keys(LYCEE_TO_COLLEGES).sort((a,b)=>a.localeCompare(b,'fr'));
   const RETIRED = new Set(GEO.features.filter(f => f.properties.lycee_retired_2026).map(f => (f.properties.lycee_csv||"").toUpperCase()));
   let selectedLycee = null;
+  let activeChip = "all"; // 'all' | 'changes' | 'retired'
 
   function collegesInlineHtml(lycee) {
     const cols = (LYCEE_TO_COLLEGES[lycee] || []);
@@ -359,8 +393,26 @@
   function setSelected(lycee) {
     selectedLycee = lycee;
     renderList(); // update highlights
-    if (lycee) subtitle.textContent = `${lycee} sélectionné`;
-    else subtitle.textContent = "Tape pour rechercher & sélectionner";
+    if (!lycee) {
+      subtitle.textContent = "Tape pour rechercher & sélectionner";
+      return;
+    }
+    const cols = LYCEE_TO_COLLEGES[lycee] || [];
+    const isRet = RETIRED.has(lycee.toUpperCase());
+    const nN = countNew(cols), nR = countRem(cols);
+    let extra;
+    if (isRet) {
+      extra = "fermé rentrée 2026";
+    } else if (nN && nR) {
+      extra = `+${nN} NEW · −${nR} retiré${nR>1?"s":""}`;
+    } else if (nN) {
+      extra = `+${nN} NEW 2026`;
+    } else if (nR) {
+      extra = `−${nR} retiré${nR>1?"s":""}`;
+    } else {
+      extra = "inchangé 2025 → 2026";
+    }
+    subtitle.textContent = `${lycee} — ${extra}`;
   }
 
   function renderSelectedDetail() { /* deprecated: inline selection */ }
@@ -375,7 +427,17 @@
     const q = (filterEl.value || "").trim().toUpperCase();
     listEl.innerHTML = "";
 
-    const shown = allLycees.filter(l => !q || l.toUpperCase().includes(q));
+    const shown = allLycees.filter(l => {
+      if (q && !l.toUpperCase().includes(q)) return false;
+      if (activeChip === "changes") {
+        const arr = LYCEE_TO_COLLEGES[l] || [];
+        return arr.some(x => x.s === "new" || x.s === "removed");
+      }
+      if (activeChip === "retired") {
+        return RETIRED.has(l.toUpperCase());
+      }
+      return true;
+    });
     document.getElementById("countShown").textContent = shown.length;
     document.getElementById("countTotal").textContent = allLycees.length;
 
@@ -435,7 +497,7 @@
           const detail = document.createElement("div");
           detail.className = "inlineDetail";
           const items = renderCollItems(cols);
-          const retiredLine = isRetired ? `<div class="retired-banner">Lycée retiré du secteur 1 en 2026</div>` : "";
+          const retiredLine = isRetired ? `<div class="retired-banner">${escapeHtml(RETIRED_MSG)}</div>` : "";
           const diffBits = [];
           if (nbN) diffBits.push(`<span class="tag-new" style="margin-left:0;">+${nbN} NEW 2026</span>`);
           if (nbR) diffBits.push(`<span style="color:#b33; font-size:11px;">−${nbR} retiré${nbR>1?"s":""}</span>`);
@@ -444,26 +506,17 @@
             ${retiredLine}
             <div class="sub">Collèges secteur 1 2026 : <strong>${nb2026}</strong>${diffStr}</div>
             <div class="actions">
-              <button data-action="focus" ${hasGeo ? "" : "disabled"}>Centrer</button>
-              <button data-action="open" ${hasGeo ? "" : "disabled"}>Ouvrir</button>
+              <button data-action="map" ${hasGeo ? "" : "disabled"}>Map</button>
               <button data-action="clear">Désélectionner</button>
             </div>
             <ul style="max-height:220px; overflow:auto; margin:0; padding-left:18px;">${items}</ul>
           `;
           // Bind actions
-          const bFocus = detail.querySelector('[data-action="focus"]');
-          const bOpen  = detail.querySelector('[data-action="open"]');
+          const bMap   = detail.querySelector('[data-action="map"]');
           const bClear = detail.querySelector('[data-action="clear"]');
 
           if (hasGeo) {
-            bFocus.addEventListener("pointerup", (e) => {
-              e.stopPropagation();
-              const ll = m.layer.getLatLng();
-              map.setView(ll, 14);
-              if (optAutoPopup.checked) m.layer.openPopup();
-              if (isMobile()) setSheetCollapsed(true);
-            });
-            bOpen.addEventListener("pointerup", (e) => {
+            bMap.addEventListener("pointerup", (e) => {
               e.stopPropagation();
               const ll = m.layer.getLatLng();
               map.setView(ll, 14);
@@ -489,7 +542,7 @@
       const inlineCols = (!hasGeo && optInlineMissing.checked) ? collegesInlineHtml(lycee) : "";
       const selectedInlineDetail = (isSel) ? (() => {
         const items = renderCollItems(cols);
-        const retiredLine = isRetired ? `<div class="retired-banner">Lycée retiré du secteur 1 en 2026</div>` : "";
+        const retiredLine = isRetired ? `<div class="retired-banner">${escapeHtml(RETIRED_MSG)}</div>` : "";
         const diffBits = [];
         if (nbN) diffBits.push(`<span class="tag-new" style="margin-left:0;">+${nbN} NEW 2026</span>`);
         if (nbR) diffBits.push(`<span style="color:#b33; font-size:11px;">−${nbR} retiré${nbR>1?"s":""}</span>`);
@@ -498,12 +551,7 @@
           <div class="inlineDetail">
             ${retiredLine}
             <div class="sub">Collèges secteur 1 2026 : <strong>${nb2026}</strong>${diffStr}</div>
-            <div class="actions">
-              <button data-action="selfocus" ${hasGeo ? "" : "disabled"}>Centrer</button>
-              <button data-action="selopen" ${hasGeo ? "" : "disabled"}>Ouvrir</button>
-              <button data-action="selclear">Désélectionner</button>
-            </div>
-            <ul style="max-height:220px; overflow:auto; margin:0; padding-left:18px;">${items}</ul>
+            <ul style="max-height:260px; overflow:auto; margin:0; padding-left:18px;">${items}</ul>
           </div>
         `;
       })() : "";
@@ -514,17 +562,17 @@
         nbR && !isRetired ? `<span class="badge badge-rem">−${nbR}</span>` : ''
       ].filter(Boolean).join(' ');
 
+      const collegesLabel = isSel ? "Collèges ▴" : "Collèges ▾";
+
       div.innerHTML = `
         <strong>${escapeHtml(lycee)}</strong>
         <div class="meta">
-          ${hasGeo ? '<span class="ok">géolocalisé</span>' : '<span class="warn">non géolocalisé</span>'}
-          • collèges 2026 : ${nb2026}
+          collèges 2026 : ${nb2026}
           ${metaBadges ? '&nbsp; ' + metaBadges : ''}
         </div>
         <div class="row" style="margin-top:10px;">
-          <button data-action="focus" ${hasGeo ? "" : "disabled"}>Centrer</button>
-          <button data-action="open" ${hasGeo ? "" : "disabled"}>Ouvrir</button>
-          <button data-action="select">Sélectionner</button>
+          <button data-action="map" ${hasGeo ? "" : "disabled"}>Map</button>
+          <button data-action="toggle">${collegesLabel}</button>
         </div>
         ${inlineCols}
         ${selectedInlineDetail}
@@ -542,55 +590,18 @@
         }
       });
 
-      const btnFocus = div.querySelector('[data-action="focus"]');
-      const btnOpen = div.querySelector('[data-action="open"]');
-      const btnSelect = div.querySelector('[data-action="select"]');
+      const btnMap    = div.querySelector('[data-action="map"]');
+      const btnToggle = div.querySelector('[data-action="toggle"]');
 
-      btnSelect.addEventListener("pointerup", (e) => {
+      btnToggle.addEventListener("pointerup", (e) => {
         e.stopPropagation();
-        setSelected(lycee);
+        // Toggle: ouvre/ferme la liste inline sans toucher à la carte
+        if (selectedLycee === lycee) setSelected(null);
+        else setSelected(lycee);
       });
 
-      // Actions du détail inline (si sélectionné)
-      const bSelFocus = div.querySelector('[data-action="selfocus"]');
-      const bSelOpen  = div.querySelector('[data-action="selopen"]');
-      const bSelClear = div.querySelector('[data-action="selclear"]');
-
-      if (bSelClear) {
-        bSelClear.addEventListener("pointerup", (e) => {
-          e.stopPropagation();
-          setSelected(null);
-        });
-      }
-      if (hasGeo && bSelFocus) {
-        bSelFocus.addEventListener("pointerup", (e) => {
-          e.stopPropagation();
-          const ll = m.layer.getLatLng();
-          map.setView(ll, 14);
-          if (optAutoPopup.checked) m.layer.openPopup();
-          if (isMobile()) setSheetCollapsed(true);
-        });
-      }
-      if (hasGeo && bSelOpen) {
-        bSelOpen.addEventListener("pointerup", (e) => {
-          e.stopPropagation();
-          const ll = m.layer.getLatLng();
-          map.setView(ll, 14);
-          m.layer.openPopup();
-          if (isMobile()) setSheetCollapsed(true);
-        });
-      }
-
       if (hasGeo) {
-        btnFocus.addEventListener("pointerup", (e) => {
-          e.stopPropagation();
-          setSelected(lycee);
-          const ll = m.layer.getLatLng();
-          map.setView(ll, 14);
-          if (optAutoPopup.checked) m.layer.openPopup();
-          maybeCollapseAfterPick();
-        });
-        btnOpen.addEventListener("pointerup", (e) => {
+        btnMap.addEventListener("pointerup", (e) => {
           e.stopPropagation();
           setSelected(lycee);
           const ll = m.layer.getLatLng();
@@ -623,6 +634,26 @@
   filterEl.addEventListener("input", renderList);
   optInlineMissing.addEventListener("change", renderList);
   optCompact.addEventListener("change", renderList);
+
+  // Chips filtres rapides
+  document.querySelectorAll("#chips .chip").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const v = btn.getAttribute("data-chip");
+      if (activeChip === v) return;
+      activeChip = v;
+      document.querySelectorAll("#chips .chip").forEach(b => {
+        const on = b.getAttribute("data-chip") === activeChip;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      renderList();
+    });
+  });
+
+  // Légende repliée par défaut sur mobile (ouverte sur desktop)
+  const _legend = document.getElementById("legendDiff");
+  if (_legend) _legend.open = !window.matchMedia("(max-width: 900px)").matches;
 
   // Bottom sheet controls
   const sidebar = document.getElementById("sidebar");
