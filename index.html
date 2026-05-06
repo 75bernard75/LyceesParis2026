@@ -3,199 +3,573 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%93%3C/text%3E%3C/svg%3E"/>
   <title>Paris – Lycées → collèges secteur 1 (carte interactive, par l'UL12)</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"/>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-  <style>
+    <style>
     :root{
-      --border:#ddd;
-      --muted:#666;
-      --bg:#fff;
-      --chip:#f2f2f2;
-      --card:#fff;
-      --shadow: 0 10px 30px rgba(0,0,0,.12);
-      --radius: 14px;
+      /* === FCPE UL12 design tokens === */
+      --indigo-900: #2D2566;
+      --indigo-700: #3D348B;   /* primary FCPE */
+      --indigo-500: #5A4FCF;
+      --indigo-100: #EFEDFA;
+      --indigo-50:  #F7F6FC;
+
+      --green-700: #5A8A2C;    /* AA-contrast version of FCPE green */
+      --green-500: #86C440;    /* original FCPE green */
+      --good-bg:   #EFF6E5;
+      --good-bd:   #C9E0A5;
+
+      --up:        #2E7D32;
+      --down:      #B8362A;
+      --eq:        #B8B5AA;
+      --warn-bg:   #FCEFEC;
+      --warn-bd:   #EBC9C2;
+
+      /* warm / paper neutrals */
+      --ink:       #171724;
+      --ink-2:     #3A3946;
+      --ink-3:     #6E6D7B;
+      --ink-4:     #A09FA8;
+      --line:      #E6E2DA;
+      --line-soft: #EDE9DF;
+      --paper:     #FAF7F0;
+      --surface:   #FFFFFF;
+      --surface-2: #FBF9F4;
+      --tint:      #F4F1E8;
+
+      /* type scale */
+      --t-h1: 16px;
+      --t-body: 14px;
+      --t-data: 13px;
+      --t-meta: 12px;
+      --t-caption: 11px;
+
+      --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:32px;
+      --r-sm:6px; --r-md:10px; --r-lg:14px; --r-pill:999px;
+
+      --sh-1: 0 1px 1px rgba(20,20,30,.04), 0 1px 2px rgba(20,20,30,.04);
+      --sh-2: 0 2px 4px rgba(20,20,30,.05), 0 4px 12px rgba(20,20,30,.06);
+      --sh-3: 0 -8px 32px rgba(20,20,30,.10), 0 -2px 8px rgba(20,20,30,.06);
+
       --tap: 44px;
-      --accent:#14253C;
+
+      /* aliases for back-compat (existing JS/CSS references) */
+      --border: var(--line);
+      --muted:  var(--ink-3);
+      --bg:     var(--paper);
+      --chip:   var(--tint);
+      --card:   var(--surface);
+      --shadow: var(--sh-3);
+      --radius: var(--r-lg);
+      --accent: var(--indigo-700);
     }
 
-    html, body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); }
-    #app { height:100%; display:grid; grid-template-columns: 420px 1fr; }
-    #sidebar { border-right:1px solid var(--border); padding: 12px; overflow:auto; background: var(--bg); }
+    *,*::before,*::after { box-sizing: border-box; }
+
+    html, body {
+      height:100%; margin:0;
+      background: var(--paper); color: var(--ink);
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+      font-size: var(--t-body); line-height: 1.5;
+      font-feature-settings: 'kern','liga','calt';
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* paper-like atmosphere (very subtle) */
+    body::before{
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background:
+        radial-gradient(1200px 800px at 0% 0%, rgba(61,52,139,.035), transparent 60%),
+        radial-gradient(900px 600px at 100% 100%, rgba(134,196,64,.025), transparent 60%);
+    }
+
+    #app { height:100%; display:grid; grid-template-columns: 440px 1fr; position:relative; z-index:1; }
+    #sidebar {
+      border-right: 1px solid var(--line);
+      background: var(--paper);
+      padding: var(--s-4);
+      overflow: auto;
+    }
     #map { height:100%; width:100%; }
 
-    .hint{ font-size:12px; color:#555; line-height:1.35; margin-bottom:10px; }
-    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .search{ display:flex; gap:8px; margin: 10px 0 12px; }
+    /* Custom scrollbar */
+    #sidebar::-webkit-scrollbar { width: 8px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background: var(--line); border-radius: var(--r-pill); }
+    #sidebar::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+    /* === Header (logo | title | actions) === */
+    .sheet-head{
+      display:flex; align-items:center; gap: var(--s-3);
+      padding-bottom: var(--s-3);
+      border-bottom: 1px solid var(--line-soft);
+      margin-bottom: var(--s-4);
+    }
+    .ul12-logo-link{
+      flex-shrink:0; display:inline-flex; align-items:center; line-height:0;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity .2s;
+    }
+    .ul12-logo-link:hover { opacity: .8; }
+    .ul12-logo { height: 50px; width:auto; display:block; }
+    @media (max-width: 900px) { .ul12-logo { height: 38px; } }
+
+    .sheet-title { flex:1; min-width:0; }
+    .sheet-title .t {
+      font-family: 'Fraunces', Georgia, serif;
+      font-variation-settings: 'opsz' 36, 'SOFT' 30;
+      font-weight: 600;
+      font-size: 18px;
+      line-height: 1.18;
+      color: var(--ink);
+      letter-spacing: -.005em;
+    }
+    .sheet-title .t .by {
+      font-style: italic;
+      color: var(--indigo-700);
+      font-weight: 500;
+    }
+    .sheet-title .t .credit {
+      display: block;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-style: italic;
+      font-size: 11px;
+      color: var(--ink-3);
+      font-weight: 400;
+      letter-spacing: 0;
+      margin-top: 3px;
+    }
+    .sheet-title .s {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--ink-3);
+      margin-top: 3px;
+      font-feature-settings: 'tnum';
+    }
+
+    .sheet-actions { display:flex; gap: var(--s-2); align-items:center; flex-shrink:0; }
+
+    /* === Hint / disclaimer block === */
+    .hint {
+      font-size: var(--t-caption);
+      color: var(--ink-3);
+      line-height: 1.55;
+      margin: 0 0 var(--s-3);
+      padding: var(--s-3);
+      background: var(--surface-2);
+      border-radius: var(--r-md);
+      border: 1px solid var(--line-soft);
+    }
+    .hint strong { color: var(--down); }
+    .disclaimer-tag {
+      display: inline-block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--warn-bg);
+      color: var(--down);
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-right: 6px;
+      vertical-align: 2px;
+      border: 1px solid var(--warn-bd);
+    }
+
+    /* === Inputs === */
     input[type="text"]{
-      width:100%;
-      padding: 10px 12px;
-      border:1px solid #ccc;
-      border-radius: 12px;
-      font-size: 14px;
-      height: var(--tap);
+      width:100%; height: var(--tap); padding: 0 var(--s-3);
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit; font-size: var(--t-body);
       box-sizing: border-box;
+      transition: border-color .2s, box-shadow .2s;
     }
-    button{
-      padding: 10px 12px;
-      border:1px solid #ccc;
-      background:#f7f7f7;
-      border-radius: 12px;
-      cursor:pointer;
-      height: var(--tap);
-      font-size: 14px;
+    input[type="text"]::placeholder { color: var(--ink-4); }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--indigo-700);
+      box-shadow: 0 0 0 3px rgba(61,52,139,.12);
     }
-    button:hover{ background:#eee; }
-    button:disabled{ cursor:not-allowed; opacity:.55; }
 
-    .badge{
-      font-size:12px;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: var(--chip);
-      border: 1px solid #e6e6e6;
-    }
-    .warn{ color:#8a2b2b; }
-    .ok{ color:#1f6b3a; }
+    .search { display:flex; gap: var(--s-2); margin: var(--s-2) 0 var(--s-3); }
+    .row { display:flex; gap: var(--s-2); align-items:center; flex-wrap:wrap; }
 
-    /* Cards */
-    .card{
-      padding: 12px;
-      border: 1px solid #eee;
-      border-radius: var(--radius);
-      margin-bottom: 10px;
-      background: var(--card);
-    }
-    .card.selected{
-      border-color: rgba(20,37,60,.35);
-      box-shadow: 0 6px 18px rgba(20,37,60,.12);
-    }
-    .card strong{ display:block; font-size:14px; cursor:pointer; }
-    .meta{ font-size:12px; color: var(--muted); margin-top:4px; }
-
-    /* Compact rows */
-    .compactRow{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px;
-      padding: 10px 12px;
-      border: 1px solid #eee;
-      border-radius: var(--radius);
-      margin-bottom: 10px;
-      background: var(--card);
-      cursor:pointer;
-      user-select:none;
+    /* === Buttons === */
+    button {
+      height: var(--tap); padding: 0 var(--s-4);
+      border: 1.5px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      border-radius: var(--r-md);
+      font: inherit; font-size: var(--t-body); font-weight: 500;
+      cursor: pointer;
+      transition: all .15s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    .compactRow.selected{
-      border-color: rgba(20,37,60,.35);
-      box-shadow: 0 6px 18px rgba(20,37,60,.12);
+    button:hover { border-color: var(--ink-4); background: var(--tint); }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: .35; cursor: not-allowed; transform:none; }
+
+    /* Primary: "Map" button */
+    button[data-action="map"] {
+      background: var(--indigo-700);
+      border-color: var(--indigo-700);
+      color: #fff;
     }
-    .compactRow .name{ font-weight:700; font-size:14px; }
-    .compactRow .count{ font-size:12px; color: var(--muted); background: var(--chip); padding: 3px 10px; border-radius:999px; border: 1px solid #e6e6e6; }
-
-    ul{ margin: 6px 0 0; padding-left: 18px; }
-    li{ margin: 2px 0; }
-    label.opt{ font-size: 12px; color:#333; display:flex; gap:10px; align-items:center; }
-    label.opt input{ transform: scale(1.1); }
-
-    /* Selected detail panel */
-    .detail{
-      border: 1px solid #eee;
-      border-radius: var(--radius);
-      padding: 12px;
-      background: #fafafa;
-      margin-bottom: 10px;
+    button[data-action="map"]:hover {
+      background: var(--indigo-900);
+      border-color: var(--indigo-900);
     }
-    .detail .title{ font-weight:800; font-size:14px; margin-bottom: 6px; }
-    .detail .sub{ font-size:12px; color: var(--muted); margin-bottom: 8px; }
-    .detail .actions{ display:flex; gap:8px; flex-wrap:wrap; }
-
-
-    /* Inline detail (stays in alphabetical list) */
-    .inlineDetail{
-      margin: -6px 0 12px;
-      border: 1px solid #eee;
-      border-radius: var(--radius);
-      padding: 10px 12px;
-      background: #fafafa;
+    button[data-action="map"]:disabled {
+      background: var(--ink-4); border-color: var(--ink-4); color: #fff;
     }
-    .inlineDetail .sub{ font-size:12px; color: var(--muted); margin-bottom: 8px; }
-    .inlineDetail .actions{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 8px; }
 
-    /* Leaflet popup ergonomics */
-    .leaflet-popup-content { margin: 10px 12px; }
-    .leaflet-popup-content-wrapper { border-radius: 14px; }
-    .leaflet-container a.leaflet-popup-close-button { width: 34px; height: 34px; font-size: 20px; }
+    /* === Badges === */
+    .badge {
+      display: inline-flex; align-items: center;
+      height: 24px; padding: 0 10px;
+      font-size: var(--t-caption); font-weight: 500;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: var(--r-pill);
+      color: var(--ink-2);
+      font-variant-numeric: tabular-nums;
+    }
+    .badge-new { background: var(--good-bg); border-color: var(--good-bd); color: var(--green-700); }
+    .badge-rem { background: var(--warn-bg); border-color: var(--warn-bd); color: var(--down); }
+    .badge-retired { background: var(--warn-bg); border-color: var(--warn-bd); color: var(--down); font-weight: 600; }
 
-    /* ------- Diff 2025 → 2026 (overlay) ------- */
-    .tag-new { color:#1f6b3a; font-style:italic; font-size:11px; margin-left:6px; letter-spacing:.2px; }
-    li.removed { color:#b33; text-decoration: line-through; }
-    li.new .coll-name { color:#1f6b3a; font-weight:600; }
-    .card.retired strong, .card.retired .card-title { color:#b33; text-decoration: line-through; }
-    .compactRow.retired .name { color:#b33; text-decoration: line-through; }
-    .badge-new { background:#e6f4ea; border-color:#b7dfc4; color:#1f6b3a; }
-    .badge-rem { background:#fdecea; border-color:#f4c7c3; color:#b33; }
-    .badge-retired { background:#fdecea; border-color:#f4c7c3; color:#b33; font-weight:600; }
-    .legend-diff { font-size: 11px; color:#444; line-height:1.5; margin: 0 0 10px; padding:8px 10px; border:1px dashed #ddd; border-radius:10px; background:#fafafa; }
-    .legend-diff .sw-new { color:#1f6b3a; font-style:italic; font-weight:600; }
-    .legend-diff .sw-rem { color:#b33; text-decoration: line-through; }
-    .retired-banner { margin-top:6px; padding:4px 8px; background:#fdecea; border:1px solid #f4c7c3; color:#b33; font-weight:600; border-radius:8px; font-size:12px; display:inline-block; }
+    .warn { color: var(--down); }
+    .ok   { color: var(--green-700); }
 
-    /* Chips filtres rapides */
-    .chips { display:flex; gap:6px; margin: 2px 0 10px; flex-wrap:wrap; }
+    /* === Cards === */
+    .card {
+      padding: var(--s-3) var(--s-4);
+      border: 1px solid var(--line-soft);
+      border-radius: var(--r-lg);
+      margin-bottom: var(--s-2);
+      background: var(--surface);
+      box-shadow: var(--sh-1);
+      transition: box-shadow .15s, border-color .15s;
+    }
+    .card:hover { box-shadow: var(--sh-2); }
+    .card.selected {
+      border-color: var(--indigo-700);
+      box-shadow: 0 0 0 1px var(--indigo-700), var(--sh-2);
+    }
+    .card strong {
+      display:block;
+      font-family: 'Fraunces', Georgia, serif;
+      font-variation-settings: 'opsz' 24;
+      font-weight: 500;
+      font-size: 19px;
+      letter-spacing: -.01em;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .meta {
+      font-size: var(--t-meta);
+      color: var(--ink-3);
+      margin-top: var(--s-1);
+      display:flex; align-items:center; gap: var(--s-2);
+      flex-wrap:wrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* === Compact rows === */
+    .compactRow {
+      display:flex; align-items:center; justify-content:space-between;
+      gap: var(--s-3);
+      padding: var(--s-3) var(--s-4);
+      border: 1px solid var(--line-soft);
+      border-radius: var(--r-md);
+      margin-bottom: var(--s-2);
+      background: var(--surface);
+      cursor: pointer; user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: all .15s;
+    }
+    .compactRow:hover { border-color: var(--ink-4); background: var(--surface-2); }
+    .compactRow.selected {
+      border-color: var(--indigo-700);
+      box-shadow: 0 0 0 1px var(--indigo-700);
+    }
+    .compactRow .name {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 15px;
+      color: var(--ink);
+    }
+    .compactRow .count {
+      font-size: var(--t-caption);
+      color: var(--ink-3);
+      background: var(--tint);
+      padding: 3px 10px;
+      border-radius: var(--r-pill);
+      border: 1px solid var(--line);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* === Options labels === */
+    label.opt {
+      font-size: var(--t-meta);
+      color: var(--ink-2);
+      display:flex; gap: var(--s-2); align-items:center;
+      margin: var(--s-1) 0;
+      cursor: pointer;
+    }
+    label.opt input { transform: scale(1.1); accent-color: var(--indigo-700); }
+
+    /* === Selected detail panels === */
+    .detail, .inlineDetail {
+      border: 1px solid var(--line-soft);
+      border-radius: var(--r-md);
+      padding: var(--s-3) var(--s-4);
+      background: var(--surface-2);
+      margin-bottom: var(--s-2);
+    }
+    .inlineDetail {
+      margin: -8px 0 var(--s-3);
+      border-top-left-radius: 0; border-top-right-radius: 0;
+      border-top: none;
+    }
+    .detail .title {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600; font-size: var(--t-h1);
+      margin-bottom: var(--s-1);
+    }
+    .detail .sub, .inlineDetail .sub {
+      font-size: var(--t-meta); color: var(--ink-3);
+      margin-bottom: var(--s-2);
+      font-variant-numeric: tabular-nums;
+    }
+    .detail .actions, .inlineDetail .actions {
+      display:flex; gap: var(--s-2); flex-wrap:wrap;
+      margin-bottom: var(--s-2);
+    }
+
+    /* === Diff list === */
+    ul.diff-list { list-style: none; margin: var(--s-2) 0 0; padding: 0; }
+    ul.diff-list li {
+      display:flex; flex-wrap:wrap; align-items:baseline; gap: 4px var(--s-2);
+      padding: 7px 0;
+      border-bottom: 1px solid var(--line-soft);
+      font-size: var(--t-data);
+      line-height: 1.4;
+      transition: background .12s;
+    }
+    ul.diff-list li:last-child { border-bottom: none; }
+    ul.diff-list li:hover { background: rgba(61,52,139,.025); }
+    ul.diff-list .col-name { flex: 1 1 auto; min-width: 0; color: var(--ink); font-weight: 400; }
+    ul.diff-list .col-name.coll-name-new { color: var(--green-700); font-weight: 600; }
+    ul.diff-list li.removed { color: var(--down); text-decoration: line-through; opacity: .7; }
+    ul.diff-list li.removed .metrics { display: none; }
+
+    /* NEW pill (left of name) */
+    .new-pill {
+      flex-shrink: 0; align-self: center;
+      background: var(--good-bg); color: var(--green-700);
+      font-size: 9px; font-style: italic; font-weight: 700;
+      padding: 2px 7px;
+      border-radius: var(--r-pill);
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      border: 1px solid var(--good-bd);
+    }
+
+    /* IPS / Bonus metrics */
+    .metrics {
+      flex-shrink: 0; margin-left: auto;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11.5px;
+      color: var(--ink-2);
+      display: inline-flex;
+      gap: 14px;
+      align-items: baseline;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .metrics .ips-val { font-weight: 500; color: var(--ink); }
+    .metrics .ips-asterisk { color: var(--ink-3); font-weight: 400; margin-left: 1px; cursor: help; font-size: 12px; vertical-align: 1px; }
+    .metrics .bonus-val { font-style: italic; color: var(--ink-3); font-weight: 400; }
+    .metrics .delta { margin-left: 4px; font-size: 10px; font-weight: 600; }
+    .metrics .delta.up   { color: var(--up); }
+    .metrics .delta.down { color: var(--down); }
+    .metrics .delta.eq   { color: var(--eq); font-weight: 400; }
+    .metrics .ips-unknown { color: var(--ink-4); font-weight: 700; }
+
+    /* === Chips (filtres rapides) === */
+    .chips {
+      display:flex; gap: 6px;
+      margin: var(--s-2) 0 var(--s-3);
+      flex-wrap:wrap;
+    }
     .chip {
-      height: 32px; padding: 0 12px; border-radius: 999px;
-      border: 1px solid #e0e0e0; background: #f2f2f2; color:#333;
-      font-size: 12px; cursor:pointer; -webkit-tap-highlight-color: transparent;
+      height: 30px;
+      padding: 0 var(--s-3);
+      border-radius: var(--r-pill);
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink-2);
+      font: inherit; font-size: var(--t-meta);
+      cursor: pointer;
+      transition: all .15s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .chip.active { background: var(--accent); color:#fff; border-color: var(--accent); }
-    .chip .tally { opacity:.75; margin-left:4px; }
+    .chip:hover { background: var(--tint); border-color: var(--ink-4); }
+    .chip.active {
+      background: var(--indigo-700);
+      color: #fff;
+      border-color: var(--indigo-700);
+    }
+    .chip.active:hover { background: var(--indigo-900); border-color: var(--indigo-900); }
 
-    /* Legend (collapsible) */
-    details.legend-diff { font-size: 11px; color:#444; line-height:1.5; margin: 0 0 10px; padding:8px 10px; border:1px dashed #ddd; border-radius:10px; background:#fafafa; }
-    details.legend-diff > summary { cursor:pointer; list-style:none; font-weight:600; user-select:none; -webkit-tap-highlight-color: transparent; }
-    details.legend-diff > summary::marker, details.legend-diff > summary::-webkit-details-marker { display:none; }
-    details.legend-diff > summary::after { content:" ▾"; color:#888; font-weight:normal; }
-    details.legend-diff[open] > summary::after { content:" ▴"; }
-    details.legend-diff .sw-new { color:#1f6b3a; font-style:italic; font-weight:600; }
-    details.legend-diff .sw-rem { color:#b33; text-decoration: line-through; }
-    details.legend-diff .body { margin-top:6px; }
+    .stats-row { display:flex; gap: 6px; margin: 0 0 var(--s-3); flex-wrap:wrap; }
 
-    /* Stats row (compactée) */
-    .stats-row { display:flex; gap:6px; margin: 0 0 10px; flex-wrap:wrap; }
+    /* === Legend === */
+    details.legend-diff {
+      font-size: var(--t-caption);
+      color: var(--ink-2);
+      line-height: 1.55;
+      margin: 0 0 var(--s-3);
+      padding: var(--s-3);
+      border: 1px solid var(--line-soft);
+      border-radius: var(--r-md);
+      background: var(--surface-2);
+    }
+    details.legend-diff > summary {
+      cursor: pointer; list-style: none;
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500; font-size: 13px;
+      color: var(--ink);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    details.legend-diff > summary::marker,
+    details.legend-diff > summary::-webkit-details-marker { display: none; }
+    details.legend-diff > summary::after { content: ' ▾'; color: var(--ink-4); font-weight: 400; }
+    details.legend-diff[open] > summary::after { content: ' ▴'; }
+    details.legend-diff strong { font-family: 'Fraunces', Georgia, serif; font-weight: 500; color: var(--ink); }
+    details.legend-diff .sw-new { color: var(--green-700); font-style: italic; font-weight: 600; }
+    details.legend-diff .sw-rem { color: var(--down); text-decoration: line-through; }
+    details.legend-diff .body { margin-top: var(--s-2); }
 
-    /* Mobile bottom sheet */
+    /* === Card / row retired === */
+    .card.retired strong, .card.retired .card-title { color: var(--down); text-decoration: line-through; }
+    .compactRow.retired .name { color: var(--down); text-decoration: line-through; }
+
+    /* Retired banner inside popups/details */
+    .retired-banner {
+      margin-top: var(--s-2);
+      padding: 8px 10px;
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-bd);
+      color: var(--down);
+      font-weight: 600;
+      border-radius: var(--r-md);
+      font-size: var(--t-meta);
+      line-height: 1.4;
+    }
+
+    .tag-new {
+      color: var(--green-700);
+      font-style: italic;
+      font-size: var(--t-caption);
+      margin-left: 6px;
+      font-weight: 500;
+    }
+
+    /* === Leaflet popup === */
+    .leaflet-popup-content { margin: var(--s-3) var(--s-4); font-family: 'IBM Plex Sans', sans-serif; }
+    .leaflet-popup-content-wrapper { border-radius: var(--r-lg); box-shadow: var(--sh-2); }
+    .leaflet-container a.leaflet-popup-close-button { width: 32px; height: 32px; font-size: 18px; color: var(--ink-3); padding: 6px 0 0; }
+    .leaflet-popup-content ul.diff-list li { font-size: 12.5px; padding: 6px 0; }
+
+    /* Leaflet attribution refined */
+    .leaflet-control-attribution { font-family: 'IBM Plex Sans', sans-serif; font-size: 10px !important; background: rgba(255,255,255,.85) !important; }
+
+    /* === Custom marker === */
+    .lycee-marker svg { display:block; filter: drop-shadow(0 2px 4px rgba(20,20,30,.25)); }
+
+    /* === Mobile: bottom sheet === */
     @media (max-width: 900px){
-      #app{ grid-template-columns: 1fr; }
-      #sidebar{
-        position: fixed;
-        left: 0; right: 0;
-        bottom: 0;
+      #app { grid-template-columns: 1fr; }
+      #sidebar {
+        position: fixed; left: 0; right: 0; bottom: 0;
         border-right: none;
-        border-top: 1px solid var(--border);
-        border-radius: 18px 18px 0 0;
-        box-shadow: var(--shadow);
-        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-        max-height: 72vh;
+        border-top: 1px solid var(--line);
+        border-radius: 24px 24px 0 0;
+        box-shadow: var(--sh-3);
+        padding: var(--s-3) var(--s-4) calc(var(--s-3) + env(safe-area-inset-bottom));
+        max-height: 78vh;
         overflow: hidden;
         z-index: 1000;
+        background: var(--paper);
       }
-      #sidebar.collapsed{ max-height: 64px; overflow: hidden; }
-      .sheet-head{ display:flex; align-items:center; justify-content: space-between; gap: 10px; padding: 6px 2px 10px; }
-      .grabber{ width: 46px; height: 5px; border-radius: 999px; background: #d8d8d8; margin: 0 auto 6px; }
-      .sheet-title{ display:flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; user-select:none; -webkit-tap-highlight-color: transparent; }
-      .sheet-title .t{ font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .sheet-title .s{ font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .sheet-actions{ display:flex; gap: 8px; align-items: center; }
-      .iconbtn{ width: 44px; height: 44px; padding: 0; border-radius: 14px; display:flex; align-items:center; justify-content:center; user-select: none; -webkit-tap-highlight-color: transparent; }
-      #sidebar .sheet-body{ overflow:auto; max-height: calc(72vh - 64px); padding-right: 2px; }
-      #sidebar.collapsed .sheet-body{ display:none; }
-      button{ height: 46px; border-radius: 14px; }
-      input[type="text"]{ height: 46px; border-radius: 14px; }
+      #sidebar.collapsed { max-height: 76px; overflow: hidden; }
+
+      .grabber {
+        width: 44px; height: 4px;
+        border-radius: var(--r-pill);
+        background: var(--ink-4);
+        opacity: 0.4;
+        margin: 0 auto var(--s-2);
+      }
+
+      .sheet-head {
+        padding-bottom: var(--s-3);
+        margin-bottom: var(--s-3);
+      }
+      .sheet-title .t {
+        font-size: 14px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .sheet-title .t .credit { display: none; }
+      .sheet-title .s {
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+
+      .iconbtn {
+        width: 44px; height: 44px;
+        padding: 0;
+        border-radius: var(--r-md);
+        display:flex; align-items:center; justify-content:center;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        color: var(--ink-2);
+        font-size: 18px;
+        cursor: pointer;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .iconbtn:hover { background: var(--tint); }
+
+      #sidebar .sheet-body {
+        overflow: auto;
+        max-height: calc(78vh - 86px);
+        padding-right: var(--s-1);
+      }
+      #sidebar.collapsed .sheet-body { display: none; }
+
+      button { height: 46px; }
+      input[type="text"] { height: 46px; }
+      ul.diff-list li { font-size: 13px; }
     }
   </style>
 </head>
@@ -206,8 +580,11 @@
     <div class="grabber" id="grabber" aria-hidden="true"></div>
 
     <div class="sheet-head">
+      <a class="ul12-logo-link" href="https://ul12-fcpe.fr/" target="_blank" rel="noopener" title="FCPE Union locale Paris 12">
+        <img class="ul12-logo" src="data:image/png;base64,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" alt="FCPE UL Paris 12" width="38" height="44" decoding="async"/>
+      </a>
       <div class="sheet-title" role="button" id="toggleSheet" aria-label="Ouvrir/fermer le panneau">
-        <div class="t">Lycées de Paris → collèges (secteur 1), par l'UL12<br/><span style="font-size: 75%">[sur une idée originale d'A.T. ;)]</span></h1></div>
+        <div class="t">Lycées de Paris <span style="color:var(--indigo-700)">→</span> collèges <span style="color:var(--ink-3)">(secteur 1)</span>, <span class="by">par l'UL12</span><span class="credit">[sur une idée originale d'A.T. ;)]</span></div>
         <div class="s" id="subtitle">Tape pour rechercher & sélectionner</div>
       </div>
       <div class="sheet-actions">
@@ -218,16 +595,28 @@
 
     <div class="sheet-body">
       <div class="hint" style="margin-top:0;">
-        HTML unique, consultable en local. Positions : JSON (dép. 75). Fond OpenStreetMap : connexion requise.<br/> 
-	  <span style="color:red">DISCLAIMER : Données récupérées automatiquement via des sources publiques, <strong>non vérifiées manuellement. Si vous constatez une erreur, remontez-la svp à l'UL12</strong></span>.<br/>
+        HTML unique, consultable en local. Positions : JSON (dép. 75). Fond OpenStreetMap : connexion requise.<br/>
+        <span class="disclaimer-tag">Disclaimer</span><span style="color:var(--down)">Données récupérées automatiquement via des sources publiques, <strong>non vérifiées manuellement. Si vous constatez une erreur, remontez-la svp à l'UL12</strong>.</span>
       </div>
 
       <details class="legend-diff" id="legendDiff">
-        <summary>Mise à jour 2026 · diff 2025 → 2026</summary>
+        <summary>Mise à jour 2026 · diff 2025 → 2026 · IPS &amp; Bonus IPS</summary>
         <div class="body">
+          <strong>Diff secteur 1</strong><br/>
           COLLEGE <span class="sw-new">NEW 2026</span> : nouveau collège affecté à ce lycée en 2026.<br/>
           <span class="sw-rem">COLLEGE</span> : collège qui n'alimente plus ce lycée en 2026.<br/>
-          Lycée barré en rouge : lycée retiré du secteur 1 en 2026.
+          Lycée barré en rouge : lycée retiré du secteur 1 en 2026.<br/>
+          <br/>
+          <strong>Indicateurs sociaux par collège</strong><br/>
+          <span style="color:#171724; font-weight:500;">126,7</span> = IPS 2025 hors SEGPA (Indice de Position Sociale, plus haut = élèves de milieux plus favorisés).<br/>
+          <span style="color:#6E6D7B; font-style:italic;">400</span> = Bonus IPS 2026 attribué au collège (plus haut = collège davantage soutenu).<br/>
+          <br/>
+          <strong>Variations</strong> — IPS : 2025 vs 2024 hors SEGPA · Bonus : 2026 vs 2025.<br/>
+          <span style="color:#2E7D32; font-weight:700;">▲</span> en hausse · 
+          <span style="color:#B8362A; font-weight:700;">▼</span> en baisse · 
+          <span style="color:#B8B5AA;">=</span> inchangé.<br/>
+          <br/>
+          <strong>Astérisque <span style="color:#6E6D7B; font-weight:700;">*</span></strong> à droite de l'IPS : collège disposant d'une SEGPA pour lequel nous n'avons pas la valeur 2025 hors SEGPA précise. La valeur affichée inclut les élèves SEGPA et est légèrement abaissée (typiquement de 2 à 5 pts) ; la variation Δ vs 2024 est donc <em>sous-estimée</em> de ce même ordre.
         </div>
       </details>
 
@@ -279,6 +668,7 @@
 <script>
   const GEO = {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.394315498648954, 48.847927308794425]}, "properties": {"lycee_csv": "ARAGO", "nom_etablissement": "Lyc\u00e9e Arago", "code_uai": "0750680G", "adresse": "4 place DE LA NATION, 75012 Paris 12e Arrondissement", "nb_colleges": 17, "colleges_diff": [{"n": "ANNE FRANK", "s": "kept"}, {"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "FLORA TRISTAN", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3154764283937124, 48.8955306966347]}, "properties": {"lycee_csv": "BALZAC", "nom_etablissement": "Lyc\u00e9e international de Paris Honor\u00e9 de Balzac", "code_uai": "0750705J", "adresse": "118 boulevard Bessi\u00e8res, 75849 Paris 17e Arrondissement", "nb_colleges": 12, "colleges_diff": [{"n": "ANTOINE COYSEVOX", "s": "kept"}, {"n": "BORIS VIAN", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "new"}, {"n": "HECTOR BERLIOZ", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "MARIE CURIE", "s": "new"}, {"n": "MAURICE UTRILLO", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "STEPHANE MALLARME", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}], "nb_new": 2, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.377938887612686, 48.88112074883683]}, "properties": {"lycee_csv": "BERGSON", "nom_etablissement": "Lyc\u00e9e Henri Bergson (enseignement secondaire)", "code_uai": "0750711R", "adresse": "27 RUE EDOUARD PAILLERON, 75019 Paris 19e Arrondissement", "nb_colleges": 16, "colleges_diff": [{"n": "CHARLES PEGUY", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "SONIA DELAUNAY", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.406968028836891, 48.84781801734053]}, "properties": {"lycee_csv": "BOUCHER", "nom_etablissement": "Lyc\u00e9e H\u00e9l\u00e8ne Boucher", "code_uai": "0750714U", "adresse": "75 COURS DE VINCENNES, 75020 Paris 20e Arrondissement", "nb_colleges": 18, "colleges_diff": [{"n": "ANNE FRANK", "s": "kept"}, {"n": "CHARLES PEGUY", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "FLORA TRISTAN", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3117184295922955, 48.843450595841645]}, "properties": {"lycee_csv": "BUFFON", "nom_etablissement": "Lyc\u00e9e Buffon", "code_uai": "0750693W", "adresse": "16 boulevard Pasteur, 75015 Paris 15e Arrondissement", "nb_colleges": 15, "colleges_diff": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ANDRE CITROEN", "s": "kept"}, {"n": "BUFFON", "s": "kept"}, {"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.254942359765863, 48.8419754563088]}, "properties": {"lycee_csv": "C. BERNARD", "nom_etablissement": "Lyc\u00e9e Claude Bernard", "code_uai": "0750698B", "adresse": "1 avenue DU PARC DES PRINCES, 75016 Paris 16e Arrondissement", "nb_colleges": 7, "colleges_diff": [{"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3623234040857297, 48.82743361046444]}, "properties": {"lycee_csv": "C. MONET", "nom_etablissement": "Lyc\u00e9e Claude Monet", "code_uai": "0750683K", "adresse": "1 rue DU DOCTEUR MAGNAN, 75013 Paris 13e Arrondissement", "nb_colleges": 11, "colleges_diff": [{"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.2969840860656223, 48.84299077854994]}, "properties": {"lycee_csv": "CAMILLE SEE", "nom_etablissement": "Lyc\u00e9e Camille S\u00e9e", "code_uai": "0750694X", "adresse": "11 rue LEON LHERMITTE, 75015 Paris 15e Arrondissement", "nb_colleges": 13, "colleges_diff": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ANDRE CITROEN", "s": "kept"}, {"n": "BUFFON", "s": "kept"}, {"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.307843373633904, 48.8844772461129]}, "properties": {"lycee_csv": "CARNOT", "nom_etablissement": "Lyc\u00e9e Carnot", "code_uai": "0750704H", "adresse": "145 BOULEVARD MALESHERBES, 75017 Paris 17e Arrondissement", "nb_colleges": 12, "colleges_diff": [{"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "BORIS VIAN", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "MAURICE UTRILLO", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "STEPHANE MALLARME", "s": "kept"}, {"n": "YVONNE LE TAC", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3196885071009623, 48.881738320109136]}, "properties": {"lycee_csv": "CHAPTAL", "nom_etablissement": "Lyc\u00e9e Chaptal", "code_uai": "0750663N", "adresse": "45 boulevard DES BATIGNOLLES, 75008 Paris 8e Arrondissement", "nb_colleges": 16, "colleges_diff": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "BORIS VIAN", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "JULES FERRY", "s": "kept"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "kept"}, {"n": "SONIA DELAUNAY", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3604935218748184, 48.854235652843826]}, "properties": {"lycee_csv": "CHARLEMAGNE", "nom_etablissement": "Lyc\u00e9e Charlemagne", "code_uai": "0750652B", "adresse": "14 rue Charlemagne, 75004 Paris 4e Arrondissement", "nb_colleges": 15, "colleges_diff": [{"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3634152185070483, 48.88270546564568]}, "properties": {"lycee_csv": "COLBERT", "nom_etablissement": "Lyc\u00e9e Colbert", "code_uai": "0750673Z", "adresse": "27 rue DE CHATEAU LANDON, 75010 Paris 10e Arrondissement", "nb_colleges": 29, "colleges_diff": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "new"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "JULES FERRY", "s": "new"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "MAURICE UTRILLO", "s": "new"}, {"n": "SONIA DELAUNAY", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}], "nb_new": 3, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3269329145962345, 48.874803117835995]}, "properties": {"lycee_csv": "CONDORCET", "nom_etablissement": "Lyc\u00e9e Condorcet", "code_uai": "0750667T", "adresse": "8 RUE DU HAVRE, 75009 Paris 9e Arrondissement", "nb_colleges": 13, "colleges_diff": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "ANTOINE COYSEVOX", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "kept"}, {"n": "HECTOR BERLIOZ", "s": "kept"}, {"n": "JULES FERRY", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "MARIE CURIE", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.39587754134031, 48.88151208852299]}, "properties": {"lycee_csv": "DIDEROT", "nom_etablissement": "Lyc\u00e9e polyvalent Diderot", "code_uai": "0750712S", "adresse": "61 rue DAVID D'ANGERS, 75019 Paris 19e Arrondissement", "nb_colleges": 14, "colleges_diff": [{"n": "CHARLES PEGUY", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "FLORA TRISTAN", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.392412630364061, 48.85440198778214]}, "properties": {"lycee_csv": "DORIAN", "nom_etablissement": "Lyc\u00e9e polyvalent Dorian", "code_uai": "0750676C", "adresse": "74 avenue PHILIPPE AUGUSTE, 75011 Paris 11e Arrondissement", "nb_colleges": 15, "colleges_diff": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "ANNE FRANK", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3369360393461895, 48.83176633760908]}, "properties": {"lycee_csv": "E. DUBOIS", "nom_etablissement": "Lyc\u00e9e \u00c9mile Dubois", "code_uai": "0750692V", "adresse": "14 rue Emile Dubois, 75014 Paris 14e Arrondissement", "nb_colleges": 11, "colleges_diff": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3398744815433177, 48.881251468979656]}, "properties": {"lycee_csv": "E. QUINET", "nom_etablissement": "Lyc\u00e9e polyvalent Edgar Quinet", "code_uai": "0750671X", "adresse": "63 rue DES MARTYRS, 75009 Paris 9e Arrondissement", "nb_colleges": 15, "colleges_diff": [{"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "BERNARD PALISSY", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "new"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "new"}, {"n": "STEPHANE MALLARME", "s": "new"}, {"n": "YVONNE LE TAC", "s": "kept"}], "nb_new": 3, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.340812500406945, 48.853251977501536]}, "properties": {"lycee_csv": "FENELON", "nom_etablissement": "Lyc\u00e9e F\u00e9nelon", "code_uai": "0750660K", "adresse": "2 rue de l'Eperon, 75006 Paris 6e Arrondissement", "nb_colleges": 12, "colleges_diff": [{"n": "BERNARD PALISSY", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "SONIA DELAUNAY", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.361407304319577, 48.824045272807375]}, "properties": {"lycee_csv": "G.FAURE", "nom_etablissement": "Lyc\u00e9e Gabriel Faur\u00e9", "code_uai": "0750684L", "adresse": "81 AVENUE DE CHOISY, 75013 Paris 13e Arrondissement", "nb_colleges": 11, "colleges_diff": [{"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.2565778962761875, 48.845190990860424]}, "properties": {"lycee_csv": "J. DE LA FONTAINE", "nom_etablissement": "Lyc\u00e9e Jean de La Fontaine", "code_uai": "0750702F", "adresse": "1 place DE LA PORTE MOLITOR, 75016 Paris 16e Arrondissement", "nb_colleges": 7, "colleges_diff": [{"n": "ANDRE CITROEN", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.2794516898235146, 48.86556113280372]}, "properties": {"lycee_csv": "J. DE SAILLY", "nom_etablissement": "Lyc\u00e9e Janson de Sailly", "code_uai": "0750699C", "adresse": "106 rue DE LA POMPE, 75016 Paris 16e Arrondissement", "nb_colleges": 12, "colleges_diff": [{"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "BORIS VIAN", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3434236459416136, 48.881485926285514]}, "properties": {"lycee_csv": "J. DECOUR", "nom_etablissement": "Lyc\u00e9e Jacques Decour", "code_uai": "0750668U", "adresse": "12 AVENUE TRUDAINE, 75009 Paris 9e Arrondissement", "nb_colleges": 21, "colleges_diff": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "ANTOINE COYSEVOX", "s": "new"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "kept"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "kept"}, {"n": "HECTOR BERLIOZ", "s": "new"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "JULES FERRY", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "MARIE CURIE", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "MAURICE UTRILLO", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "kept"}, {"n": "YVONNE LE TAC", "s": "kept"}], "nb_new": 2, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3290972094750506, 48.884073919064974]}, "properties": {"lycee_csv": "J. FERRY", "nom_etablissement": "Lyc\u00e9e Jules Ferry", "code_uai": "0750669V", "adresse": "77 boulevard DE CLICHY, 75009 Paris 9e Arrondissement", "nb_colleges": 15, "colleges_diff": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "ANTOINE COYSEVOX", "s": "kept"}, {"n": "BORIS VIAN", "s": "new"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "kept"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "HECTOR BERLIOZ", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "kept"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "JULES FERRY", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "kept"}, {"n": "STEPHANE MALLARME", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}, {"n": "YVONNE LE TAC", "s": "kept"}], "nb_new": 1, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.2673239824680143, 48.847305146907075]}, "properties": {"lycee_csv": "J.B. SAY", "nom_etablissement": "Lyc\u00e9e Jean-Baptiste Say", "code_uai": "0750700D", "adresse": "11 bis rue D'AUTEUIL, 75016 Paris 16e Arrondissement", "nb_colleges": 9, "colleges_diff": [{"n": "ANDRE CITROEN", "s": "kept"}, {"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.349088600466694, 48.8783808876197]}, "properties": {"lycee_csv": "LAMARTINE", "nom_etablissement": "Lyc\u00e9e Alphonse de Lamartine", "code_uai": "0750670W", "adresse": "121 RUE DU FG POISSONNIERE, 75009 Paris 9e Arrondissement", "nb_colleges": 21, "colleges_diff": [{"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "BERNARD PALISSY", "s": "kept"}, {"n": "CHARLES PEGUY", "s": "kept"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "kept"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "MARIE CURIE", "s": "kept"}, {"n": "MAURICE UTRILLO", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "kept"}, {"n": "SONIA DELAUNAY", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3392948133354463, 48.84235506126977]}, "properties": {"lycee_csv": "LAVOISIER", "nom_etablissement": "Lyc\u00e9e Lavoisier", "code_uai": "0750656F", "adresse": "17 rue Henri Barbusse, 75005 Paris 5e Arrondissement", "nb_colleges": 15, "colleges_diff": [{"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "BERNARD PALISSY", "s": "kept"}, {"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.2721249445436613, 48.855000626527904]}, "properties": {"lycee_csv": "MOLIERE", "nom_etablissement": "Lyc\u00e9e Moli\u00e8re", "code_uai": "0750703G", "adresse": "71 RUE DU RANELAGH, 75016 Paris 16e Arrondissement", "nb_colleges": 9, "colleges_diff": [{"n": "ANDRE CITROEN", "s": "kept"}, {"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3348315716616432, 48.844236978189386]}, "properties": {"lycee_csv": "MONTAIGNE", "nom_etablissement": "Lyc\u00e9e Montaigne", "code_uai": "0750657G", "adresse": "17 RUE AUGUSTE COMTE, 75006 Paris 6e Arrondissement", "nb_colleges": 12, "colleges_diff": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.4091788098407485, 48.83984177110137]}, "properties": {"lycee_csv": "P. VALERY", "nom_etablissement": "Lyc\u00e9e Paul Val\u00e9ry", "code_uai": "0750679F", "adresse": "38 boulevard SOULT, 75012 Paris 12e Arrondissement", "nb_colleges": 16, "colleges_diff": [{"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.328867020425414, 48.84088231184501]}, "properties": {"lycee_csv": "PAUL BERT", "nom_etablissement": "Lyc\u00e9e Paul Bert", "code_uai": "0750689S", "adresse": "7 rue Huyghens, 75014 Paris 14e Arrondissement", "nb_colleges": 18, "colleges_diff": [{"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "BUFFON", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3457450604779764, 48.89923870514318]}, "properties": {"lycee_csv": "RABELAIS", "nom_etablissement": "Lyc\u00e9e Fran\u00e7ois Rabelais", "code_uai": "0750688R", "adresse": "9 rue Francis de Croisset, 75018 Paris 18e Arrondissement", "nb_colleges": 0, "colleges_diff": [{"n": "ANTOINE COYSEVOX", "s": "removed"}, {"n": "BORIS VIAN", "s": "removed"}, {"n": "GEORGES CLEMENCEAU", "s": "removed"}, {"n": "GERARD PHILIPE", "s": "removed"}, {"n": "HECTOR BERLIOZ", "s": "removed"}, {"n": "HONORE DE BALZAC", "s": "removed"}, {"n": "JULES FERRY", "s": "removed"}, {"n": "MARIE CURIE", "s": "removed"}, {"n": "MAURICE UTRILLO", "s": "removed"}, {"n": "ROLAND DORGELES", "s": "removed"}, {"n": "STEPHANE MALLARME", "s": "removed"}], "nb_new": 0, "nb_removed": 11, "lycee_retired_2026": true}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.322300419725228, 48.8764506501621]}, "properties": {"lycee_csv": "RACINE", "nom_etablissement": "Lyc\u00e9e Racine", "code_uai": "0750664P", "adresse": "20 rue DU ROCHER, 75008 Paris 8e Arrondissement", "nb_colleges": 14, "colleges_diff": [{"n": "ANTOINE COYSEVOX", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "kept"}, {"n": "HECTOR BERLIOZ", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "MARIE CURIE", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "STEPHANE MALLARME", "s": "kept"}, {"n": "YVONNE LE TAC", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.408337842697979, 48.847671009915615]}, "properties": {"lycee_csv": "RAVEL", "nom_etablissement": "Lyc\u00e9e Maurice Ravel", "code_uai": "0750715V", "adresse": "89 cours DE VINCENNES, 75020 Paris 20e Arrondissement", "nb_colleges": 17, "colleges_diff": [{"n": "FLORA TRISTAN", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.347148550517291, 48.83256989645171]}, "properties": {"lycee_csv": "RODIN", "nom_etablissement": "Lyc\u00e9e Rodin", "code_uai": "0750682J", "adresse": "19 RUE CORVISART, 75013 Paris 13e Arrondissement", "nb_colleges": 18, "colleges_diff": [{"n": "BUFFON", "s": "kept"}, {"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.358196233724338, 48.85485829556443]}, "properties": {"lycee_csv": "S. GERMAIN", "nom_etablissement": "Lyc\u00e9e Sophie Germain", "code_uai": "0750653C", "adresse": "9 rue DE JOUY, 75004 Paris 4e Arrondissement", "nb_colleges": 17, "colleges_diff": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "CHARLES PEGUY", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3640346171235267, 48.86135218900356]}, "properties": {"lycee_csv": "S. WEIL", "nom_etablissement": "Lyc\u00e9e polyvalent Simone Weil", "code_uai": "0750651A", "adresse": "7 rue de Poitou, 75003 Paris 3e Arrondissement", "nb_colleges": 10, "colleges_diff": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "ANNE FRANK", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.358843148100717, 48.86619264109878]}, "properties": {"lycee_csv": "TURGOT", "nom_etablissement": "Lyc\u00e9e Turgot", "code_uai": "0750647W", "adresse": "69 rue de Turbigo, 75003 Paris 3e Arrondissement", "nb_colleges": 16, "colleges_diff": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "BERNARD PALISSY", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.3148477839827657, 48.85230029234186]}, "properties": {"lycee_csv": "V. DURUY", "nom_etablissement": "Lyc\u00e9e Victor Duruy", "code_uai": "0750662M", "adresse": "33 BOULEVARD DES INVALIDES, 75007 Paris 7e Arrondissement", "nb_colleges": 13, "colleges_diff": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "BUFFON", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.363169676401168, 48.85751187081702]}, "properties": {"lycee_csv": "V. HUGO", "nom_etablissement": "Lyc\u00e9e Victor Hugo", "code_uai": "0750648X", "adresse": "27 rue de S\u00e9vign\u00e9, 75003 Paris 3e Arrondissement", "nb_colleges": 12, "colleges_diff": [{"n": "ANNE FRANK", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}, {"type": "Feature", "geometry": {"type": "Point", "coordinates": [2.384525602087465, 48.86352601850053]}, "properties": {"lycee_csv": "VOLTAIRE", "nom_etablissement": "Lyc\u00e9e Voltaire", "code_uai": "0750675B", "adresse": "101 avenue de la R\u00e9publique, 75011 Paris 11e Arrondissement", "nb_colleges": 21, "colleges_diff": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "FLORA TRISTAN", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}], "nb_new": 0, "nb_removed": 0, "lycee_retired_2026": false}}]};
   const LYCEE_TO_COLLEGES = {"ARAGO": [{"n": "ANNE FRANK", "s": "kept"}, {"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "FLORA TRISTAN", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}], "BALZAC": [{"n": "ANTOINE COYSEVOX", "s": "kept"}, {"n": "BORIS VIAN", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "new"}, {"n": "HECTOR BERLIOZ", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "MARIE CURIE", "s": "new"}, {"n": "MAURICE UTRILLO", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "STEPHANE MALLARME", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}], "BERGSON": [{"n": "CHARLES PEGUY", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "SONIA DELAUNAY", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}], "BOUCHER": [{"n": "ANNE FRANK", "s": "kept"}, {"n": "CHARLES PEGUY", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "FLORA TRISTAN", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}], "BUFFON": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ANDRE CITROEN", "s": "kept"}, {"n": "BUFFON", "s": "kept"}, {"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "C. BERNARD": [{"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "C. MONET": [{"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}], "CAMILLE SEE": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ANDRE CITROEN", "s": "kept"}, {"n": "BUFFON", "s": "kept"}, {"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "CARNOT": [{"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "BORIS VIAN", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "MAURICE UTRILLO", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "STEPHANE MALLARME", "s": "kept"}, {"n": "YVONNE LE TAC", "s": "kept"}], "CHAPTAL": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "BORIS VIAN", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "JULES FERRY", "s": "kept"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "kept"}, {"n": "SONIA DELAUNAY", "s": "kept"}], "CHARLEMAGNE": [{"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}], "COLBERT": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "new"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "JULES FERRY", "s": "new"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "MAURICE UTRILLO", "s": "new"}, {"n": "SONIA DELAUNAY", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}], "CONDORCET": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "ANTOINE COYSEVOX", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "kept"}, {"n": "HECTOR BERLIOZ", "s": "kept"}, {"n": "JULES FERRY", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "MARIE CURIE", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}], "DIDEROT": [{"n": "CHARLES PEGUY", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "FLORA TRISTAN", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}], "DORIAN": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "ANNE FRANK", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}], "E. DUBOIS": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}], "E. QUINET": [{"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "BERNARD PALISSY", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "new"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "new"}, {"n": "STEPHANE MALLARME", "s": "new"}, {"n": "YVONNE LE TAC", "s": "kept"}], "FENELON": [{"n": "BERNARD PALISSY", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "SONIA DELAUNAY", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}], "G.FAURE": [{"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}], "J. DE LA FONTAINE": [{"n": "ANDRE CITROEN", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "J. DE SAILLY": [{"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "BORIS VIAN", "s": "kept"}, {"n": "CARNOT", "s": "kept"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "J. DECOUR": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "ANTOINE COYSEVOX", "s": "new"}, {"n": "CHAPTAL", "s": "kept"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "kept"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "kept"}, {"n": "HECTOR BERLIOZ", "s": "new"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "JULES FERRY", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "MARIE CURIE", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "MAURICE UTRILLO", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "PIERRE DE RONSARD", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "kept"}, {"n": "YVONNE LE TAC", "s": "kept"}], "J. FERRY": [{"n": "AIME CESAIRE", "s": "kept"}, {"n": "ANTOINE COYSEVOX", "s": "kept"}, {"n": "BORIS VIAN", "s": "new"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "kept"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "HECTOR BERLIOZ", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "kept"}, {"n": "JACQUES DECOUR", "s": "kept"}, {"n": "JULES FERRY", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "kept"}, {"n": "STEPHANE MALLARME", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}, {"n": "YVONNE LE TAC", "s": "kept"}], "J.B. SAY": [{"n": "ANDRE CITROEN", "s": "kept"}, {"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "LAMARTINE": [{"n": "ANDRE MALRAUX", "s": "kept"}, {"n": "BERNARD PALISSY", "s": "kept"}, {"n": "CHARLES PEGUY", "s": "kept"}, {"n": "DANIEL MAYER", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "GEORGES CLEMENCEAU", "s": "kept"}, {"n": "GEORGES MELIES", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "MARIE CURIE", "s": "kept"}, {"n": "MAURICE UTRILLO", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "ROLAND DORGELES", "s": "kept"}, {"n": "SONIA DELAUNAY", "s": "kept"}, {"n": "SUZANNE LACORE", "s": "kept"}, {"n": "W.A. MOZART", "s": "kept"}], "LAVOISIER": [{"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "BERNARD PALISSY", "s": "kept"}, {"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}], "MOLIERE": [{"n": "ANDRE CITROEN", "s": "kept"}, {"n": "CAMILLE SEE", "s": "kept"}, {"n": "CLAUDE BERNARD", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "JANSON DE SAILLY", "s": "kept"}, {"n": "JEAN-BAPTISTE SAY", "s": "kept"}, {"n": "JEAN DE LA FONTAINE", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "MOLIERE", "s": "kept"}], "MONTAIGNE": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "ELSA TRIOLET", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "P. VALERY": [{"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}, {"n": "THOMAS MANN", "s": "kept"}], "PAUL BERT": [{"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "BUFFON", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MONTAIGNE", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "RABELAIS": [{"n": "ANTOINE COYSEVOX", "s": "removed"}, {"n": "BORIS VIAN", "s": "removed"}, {"n": "GEORGES CLEMENCEAU", "s": "removed"}, {"n": "GERARD PHILIPE", "s": "removed"}, {"n": "HECTOR BERLIOZ", "s": "removed"}, {"n": "HONORE DE BALZAC", "s": "removed"}, {"n": "JULES FERRY", "s": "removed"}, {"n": "MARIE CURIE", "s": "removed"}, {"n": "MAURICE UTRILLO", "s": "removed"}, {"n": "ROLAND DORGELES", "s": "removed"}, {"n": "STEPHANE MALLARME", "s": "removed"}], "RACINE": [{"n": "ANTOINE COYSEVOX", "s": "kept"}, {"n": "CONDORCET", "s": "kept"}, {"n": "EDMOND MICHELET", "s": "kept"}, {"n": "GERARD PHILIPE", "s": "kept"}, {"n": "HECTOR BERLIOZ", "s": "kept"}, {"n": "HONORE DE BALZAC", "s": "kept"}, {"n": "LA ROSE BLANCHE", "s": "kept"}, {"n": "LAMARTINE", "s": "kept"}, {"n": "MARIE CURIE", "s": "kept"}, {"n": "MARX DORMOY", "s": "kept"}, {"n": "OCTAVE GREARD", "s": "kept"}, {"n": "PAUL GAUGUIN", "s": "kept"}, {"n": "STEPHANE MALLARME", "s": "kept"}, {"n": "YVONNE LE TAC", "s": "kept"}], "RAVEL": [{"n": "FLORA TRISTAN", "s": "kept"}, {"n": "GEORGES COURTELINE", "s": "kept"}, {"n": "GEORGES ROUAULT", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUY FLAVIEN", "s": "kept"}, {"n": "HENRI MATISSE", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "JEAN PERRIN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "LUCIE FAURE", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}], "RODIN": [{"n": "BUFFON", "s": "kept"}, {"n": "CAMILLE CLAUDEL", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "EVARISTE GALOIS", "s": "kept"}, {"n": "GABRIEL FAURE", "s": "kept"}, {"n": "GEORGE SAND", "s": "kept"}, {"n": "GEORGES BRAQUE", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "HENRI IV", "s": "kept"}, {"n": "LAVOISIER", "s": "kept"}, {"n": "MOULIN DES PRES", "s": "kept"}, {"n": "PAUL BERT", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "RAYMOND QUENEAU", "s": "kept"}, {"n": "RODIN", "s": "kept"}, {"n": "SAINT-EXUPERY", "s": "kept"}], "S. GERMAIN": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "CHARLES PEGUY", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "CLAUDE MONET", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "GERMAINE TILLION", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "GUSTAVE FLAUBERT", "s": "kept"}, {"n": "JEAN-BAPTISTE POQUELIN", "s": "kept"}, {"n": "MAURICE RAVEL", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "PIERRE ALVISET", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}], "S. WEIL": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "ANNE FRANK", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}], "TURGOT": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "BERNARD PALISSY", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CLAUDE CHAPPE", "s": "kept"}, {"n": "EDGAR VARESE", "s": "kept"}, {"n": "EDOUARD PAILLERON", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "GEORGES BRASSENS", "s": "kept"}, {"n": "GUILLAUME BUDE", "s": "kept"}, {"n": "HENRI BERGSON", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}], "V. DURUY": [{"n": "ALBERTO GIACOMETTI", "s": "kept"}, {"n": "ALPHONSE DAUDET", "s": "kept"}, {"n": "BUFFON", "s": "kept"}, {"n": "CLAUDE DEBUSSY", "s": "kept"}, {"n": "DE STAEL", "s": "kept"}, {"n": "FRANCOIS VILLON", "s": "kept"}, {"n": "GEORGES DUHAMEL", "s": "kept"}, {"n": "GUILLAUME APOLLINAIRE", "s": "kept"}, {"n": "JACQUES PREVERT", "s": "kept"}, {"n": "JEAN MOULIN", "s": "kept"}, {"n": "JULES ROMAINS", "s": "kept"}, {"n": "MODIGLIANI", "s": "kept"}, {"n": "VICTOR DURUY", "s": "kept"}], "V. HUGO": [{"n": "ANNE FRANK", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "HELENE BOUCHER", "s": "kept"}, {"n": "JEAN-FRANCOIS OEBEN", "s": "kept"}, {"n": "JULES VERNE", "s": "kept"}, {"n": "LOUISE MICHEL", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "PAUL VALERY", "s": "kept"}, {"n": "PAUL VERLAINE", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}], "VOLTAIRE": [{"n": "ALAIN FOURNIER", "s": "kept"}, {"n": "BEAUMARCHAIS", "s": "kept"}, {"n": "CESAR FRANCK", "s": "kept"}, {"n": "CHARLEMAGNE", "s": "kept"}, {"n": "COLETTE BESSON", "s": "kept"}, {"n": "FLORA TRISTAN", "s": "kept"}, {"n": "FRANCOIS COUPERIN", "s": "kept"}, {"n": "FRANCOISE DOLTO", "s": "kept"}, {"n": "FRANCOISE SELIGMANN", "s": "kept"}, {"n": "JEAN-BAPTISTE CLEMENT", "s": "kept"}, {"n": "LA GRANGE AUX BELLES", "s": "kept"}, {"n": "LEON GAMBETTA", "s": "kept"}, {"n": "LUCIE ET RAYMOND AUBRAC", "s": "kept"}, {"n": "MONTGOLFIER", "s": "kept"}, {"n": "PIERRE-JEAN DE BERANGER", "s": "kept"}, {"n": "PIERRE MENDES FRANCE", "s": "kept"}, {"n": "PILATRE DE ROZIER", "s": "kept"}, {"n": "ROBERT DOISNEAU", "s": "kept"}, {"n": "VALMY", "s": "kept"}, {"n": "VICTOR HUGO", "s": "kept"}, {"n": "VOLTAIRE", "s": "kept"}]};
+  const IPS_DATA = {"GEORGES COURTELINE": {"ips24": 122.9, "ips25": 123.7, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "PAUL VERLAINE": {"ips24": 122.3, "ips25": 123.2, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "JULES VERNE": {"ips24": 105.4, "ips25": 106.0, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "ALBERTO GIACOMETTI": {"ips24": 100.8, "ips25": 99.8, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "PIERRE-JEAN DE BERANGER": {"ips24": 141.8, "ips25": 138.3, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "LUCIE ET RAYMOND AUBRAC": {"ips24": 116.4, "ips25": 113.7, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "JEAN-BAPTISTE CLEMENT": {"ips24": 107.5, "ips25": 106.8, "ips25_approx": true, "has_segpa": true, "bonus25": 600, "bonus26": 800}, "ROLAND DORGELES": {"ips24": 120.3, "ips25": 124.3, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "JEAN MOULIN": {"ips24": 122.4, "ips25": 112.6, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "DE STAEL": {"ips24": 109.2, "ips25": 108.9, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "LUCIE FAURE": {"ips24": 107.5, "ips25": 113.3, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "FRANCOISE DOLTO": {"ips24": 119.5, "ips25": 115.8, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "SONIA DELAUNAY": {"ips24": 92.9, "ips25": 90.4, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "JEAN-BAPTISTE POQUELIN": {"ips24": 127.6, "ips25": 127.4, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "ALPHONSE DAUDET": {"ips24": 102.2, "ips25": 100.7, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "ALAIN FOURNIER": {"ips24": 116.0, "ips25": 113.8, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "ANNE FRANK": {"ips24": 122.4, "ips25": 121.9, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "MOULIN DES PRES": {"ips24": 120.2, "ips25": 120, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "GEORGES CLEMENCEAU": {"ips24": 80.6, "ips25": 84.3, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "VALMY": {"ips24": 111.9, "ips25": 111.5, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "HENRI MATISSE": {"ips24": 116.3, "ips25": 115.1, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "CLAUDE CHAPPE": {"ips24": 123.0, "ips25": 126.5, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "BEAUMARCHAIS": {"ips24": 128.4, "ips25": 128.6, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "W.A. MOZART": {"ips24": 97.1, "ips25": 94.4, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "GEORGES BRASSENS": {"ips24": 101.4, "ips25": 111.1, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "HECTOR BERLIOZ": {"ips24": 104.3, "ips25": 101.9, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "PIERRE MENDES FRANCE": {"ips24": 89.3, "ips25": 93.6, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "CESAR FRANCK": {"ips24": 128.2, "ips25": 130.8, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 0}, "GUY FLAVIEN": {"ips24": 115.0, "ips25": 113.0, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "GUILLAUME APOLLINAIRE": {"ips24": 97.3, "ips25": 92.1, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "GEORGES DUHAMEL": {"ips24": 124.7, "ips25": 118.1, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "GERARD PHILIPE": {"ips24": 105.1, "ips25": 105, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "GEORGE SAND": {"ips24": 112.9, "ips25": 112.9, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "CHARLES PEGUY": {"ips24": 115.9, "ips25": 118.5, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "JULES ROMAINS": {"ips24": 128.0, "ips25": 122.3, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "CLAUDE DEBUSSY": {"ips24": 127.1, "ips25": 128.3, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "EDOUARD PAILLERON": {"ips24": 100.4, "ips25": 100, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "PIERRE ALVISET": {"ips24": 145.9, "ips25": 144.3, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "RAYMOND QUENEAU": {"ips24": 135.5, "ips25": 134.5, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "JACQUES PREVERT": {"ips24": 121.7, "ips25": 129.4, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "MODIGLIANI": {"ips24": 106.4, "ips25": 103.8, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "PAUL GAUGUIN": {"ips24": 137.3, "ips25": 136.1, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "MARX DORMOY": {"ips24": 90.3, "ips25": 94.5, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "LOUISE MICHEL": {"ips24": 123.4, "ips25": 124.4, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "PIERRE DE RONSARD": {"ips24": 125.2, "ips25": 118.9, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "YVONNE LE TAC": {"ips24": 137.5, "ips25": 131.9, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "ANTOINE COYSEVOX": {"ips24": 109.3, "ips25": 108.2, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "ELSA TRIOLET": {"ips24": 104.0, "ips25": 96.3, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "CONDORCET": {"ips24": 142.2, "ips25": 141.3, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "MAURICE UTRILLO": {"ips24": 86.0, "ips25": 86.4, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "PAUL VALERY": {"ips24": 105.7, "ips25": 104.3, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "ANDRE MALRAUX": {"ips24": 128.6, "ips25": 126.8, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 400}, "MONTGOLFIER": {"ips24": 119.8, "ips25": 121.3, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "VICTOR HUGO": {"ips24": 134.4, "ips25": 135.8, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "RODIN": {"ips24": 133.4, "ips25": 127.5, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 400}, "CLAUDE MONET": {"ips24": 124.7, "ips25": 119.5, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "GABRIEL FAURE": {"ips24": 106.4, "ips25": 108.5, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 800}, "JACQUES DECOUR": {"ips24": 126.3, "ips25": 125.5, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "JULES FERRY": {"ips24": 129.0, "ips25": 131.3, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "LAMARTINE": {"ips24": 139.6, "ips25": 141.8, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "MONTAIGNE": {"ips24": 140.3, "ips25": 141.8, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "VICTOR DURUY": {"ips24": 147.3, "ips25": 144.2, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "CHAPTAL": {"ips24": 143.0, "ips25": 138, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "OCTAVE GREARD": {"ips24": 141.0, "ips25": 142, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "LAVOISIER": {"ips24": 147.8, "ips25": 147, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "CHARLEMAGNE": {"ips24": 130.0, "ips25": 131.1, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "HENRI IV": {"ips24": 147.6, "ips25": 143.6, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "FRANCOIS VILLON": {"ips24": 94.5, "ips25": 98.2, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "JEAN-FRANCOIS OEBEN": {"ips24": 115.6, "ips25": 118.5, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "BUFFON": {"ips24": 130.2, "ips25": 127, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 400}, "CAMILLE SEE": {"ips24": 129.5, "ips25": 129.9, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "CLAUDE BERNARD": {"ips24": 107.9, "ips25": 98.3, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 1200}, "JANSON DE SAILLY": {"ips24": 128.5, "ips25": 130.8, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "PAUL BERT": {"ips24": 132.2, "ips25": 126.2, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 400}, "VOLTAIRE": {"ips24": 125.8, "ips25": 131.8, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 0}, "HONORE DE BALZAC": {"ips24": 126.4, "ips25": 128, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "GEORGES MELIES": {"ips24": 82.4, "ips25": 103.4, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "EDMOND MICHELET": {"ips24": 96.6, "ips25": 121.8, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "GUSTAVE FLAUBERT": {"ips24": 108.9, "ips25": 109.6, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "GERMAINE TILLION": {"ips24": 103.3, "ips25": 100.7, "ips25_approx": false, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "EVARISTE GALOIS": {"ips24": 94.9, "ips25": 91.8, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "GEORGES BRAQUE": {"ips24": 118.2, "ips25": 120.3, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "FRANCOIS COUPERIN": {"ips24": 129.2, "ips25": 125, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 400}, "STEPHANE MALLARME": {"ips24": 123.8, "ips25": 117.9, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "MOLIERE": {"ips24": 115.4, "ips25": 117.4, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "JEAN-BAPTISTE SAY": {"ips24": 148.0, "ips25": 142.1, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "JEAN DE LA FONTAINE": {"ips24": 135.7, "ips25": 132.1, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "GUILLAUME BUDE": {"ips24": 96.1, "ips25": 101.6, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "LEON GAMBETTA": {"ips24": 104.5, "ips25": 106.9, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 800}, "BERNARD PALISSY": {"ips24": 125.4, "ips25": 123.9, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "CARNOT": {"ips24": 139.6, "ips25": 138.4, "ips25_approx": false, "has_segpa": false, "bonus25": 0, "bonus26": 0}, "FLORA TRISTAN": {"ips24": 101.7, "ips25": 97.4, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "HENRI BERGSON": {"ips24": 105.5, "ips25": 94.3, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "CAMILLE CLAUDEL": {"ips24": 88.4, "ips25": 90, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "BORIS VIAN": {"ips24": 93.2, "ips25": 93.6, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "LA GRANGE AUX BELLES": {"ips24": 110.8, "ips25": 111.4, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "HELENE BOUCHER": {"ips24": 117.2, "ips25": 119.2, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "GEORGES ROUAULT": {"ips24": 90.1, "ips25": 100, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "JEAN PERRIN": {"ips24": 85.1, "ips25": 86.4, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "MAURICE RAVEL": {"ips24": 121.6, "ips25": 120.5, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "THOMAS MANN": {"ips24": 100.3, "ips25": 103.2, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "DANIEL MAYER": {"ips24": 73.8, "ips25": 74.4, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "EDGAR VARESE": {"ips24": 111.6, "ips25": 118.5, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "COLETTE BESSON": {"ips24": 103.8, "ips25": 103.5, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "AIME CESAIRE": {"ips24": 86.8, "ips25": 82.9, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "SUZANNE LACORE": {"ips24": 91.3, "ips25": 89.1, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "FRANCOISE SELIGMANN": {"ips24": 99.1, "ips25": 100.6, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "SAINT-EXUPERY": {"ips24": 128.4, "ips25": 122.7, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 400}, "ANDRE CITROEN": {"ips24": 106.6, "ips25": 112.4, "ips25_approx": false, "has_segpa": false, "bonus25": 600, "bonus26": 800}, "ROBERT DOISNEAU": {"ips24": 101.1, "ips25": 100.8, "ips25_approx": true, "has_segpa": true, "bonus25": 1200, "bonus26": 1200}, "PILATRE DE ROZIER": {"ips24": 118.2, "ips25": 117.2, "ips25_approx": true, "has_segpa": true, "bonus25": 600, "bonus26": 400}, "MARIE CURIE": {"ips24": 103.0, "ips25": 104, "ips25_approx": false, "has_segpa": false, "bonus25": 1200, "bonus26": 1200}, "LA ROSE BLANCHE": {"ips24": 113.0, "ips25": 105.2, "ips25_approx": true, "has_segpa": true, "bonus25": 600, "bonus26": 1200}};
 
   const map = L.map('map', { center: [48.8566, 2.3522], zoom: 12 });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -293,17 +683,76 @@
   // Message spécifique pour les lycées retirés du secteur 1 en 2026 (cas RABELAIS)
   const RETIRED_MSG = "Lycée définitivement fermé à la rentrée 2026 → Disparition du dernier lycée public du 18e.";
 
-  // Diff 2025 → 2026 : rendu d'une liste d'items {n, s:'kept'|'new'|'removed'}
-  function renderCollItems(arr) {
-    return (arr || []).map(c => {
-      if (!c || typeof c === 'string') return `<li>${escapeHtml(c)}</li>`;
-      if (c.s === "new") {
-        return `<li class="new"><span class="coll-name">${escapeHtml(c.n)}</span><span class="tag-new">NEW 2026</span></li>`;
-      } else if (c.s === "removed") {
-        return `<li class="removed">${escapeHtml(c.n)}</li>`;
+  // Diff 2025 → 2026 + IPS/Bonus : rendu d'une ligne collège
+  function fmtIps(v) {
+    if (v == null) return null;
+    return Number(v).toFixed(1).replace('.', ',');
+  }
+  function fmtDelta(d, decimals) {
+    if (d == null) return null;
+    const r = Number(d.toFixed(decimals));
+    if (r === 0) return { sym: "=", cls: "eq", txt: "" };
+    const abs = Math.abs(r).toFixed(decimals).replace('.', ',');
+    return r > 0
+      ? { sym: "▲", cls: "up",   txt: abs }
+      : { sym: "▼", cls: "down", txt: abs };
+  }
+  function metricsHtml(name) {
+    const d = (typeof IPS_DATA !== 'undefined') ? IPS_DATA[name] : null;
+    if (!d) return "";
+
+    // === IPS bloc : valeur 2025 (hors SEGPA si connue, sinon avec-SEGPA + astérisque)
+    let ipsBlock;
+    if (d.ips25 == null) {
+      ipsBlock = `<span class="ips-val ips-unknown">N/A</span>`;
+    } else {
+      const v = fmtIps(d.ips25);
+      const asterisk = d.ips25_approx
+        ? `<span class="ips-asterisk" title="Collège avec SEGPA — IPS affichée incluant les élèves SEGPA. La vraie IPS hors-SEGPA serait légèrement plus haute (typiquement +2 à +5 pts), donc Δ vs 2024 sous-estimé.">*</span>`
+        : "";
+      let dHtml = "";
+      if (d.ips24 != null) {
+        const delta = fmtDelta(d.ips25 - d.ips24, 1);
+        if (delta) {
+          dHtml = `<span class="delta ${delta.cls}">${delta.sym}${delta.txt ? "&#8239;" + delta.txt : ""}</span>`;
+        }
       }
-      return `<li>${escapeHtml(c.n)}</li>`;
+      ipsBlock = `<span class="ips-val">${v}${asterisk}${dHtml}</span>`;
+    }
+
+    // === Bonus bloc : 2026 + Δ vs 2025
+    let bonusBlock;
+    if (d.bonus26 == null) {
+      bonusBlock = `<span class="bonus-val ips-unknown">N/A</span>`;
+    } else {
+      let dHtml = "";
+      if (d.bonus25 != null) {
+        const delta = fmtDelta(d.bonus26 - d.bonus25, 0);
+        if (delta) {
+          dHtml = `<span class="delta ${delta.cls}">${delta.sym}${delta.txt ? "&#8239;" + delta.txt : ""}</span>`;
+        }
+      }
+      bonusBlock = `<span class="bonus-val">${d.bonus26}${dHtml}</span>`;
+    }
+    return `<span class="metrics">${ipsBlock}${bonusBlock}</span>`;
+  }
+
+  function renderCollItems(arr) {
+    const items = (arr || []).map(c => {
+      if (!c || typeof c === 'string') {
+        return `<li><span class="col-name">${escapeHtml(c)}</span></li>`;
+      }
+      if (c.s === "removed") {
+        // Retiré : on n'affiche pas les IPS/bonus
+        return `<li class="removed"><span class="col-name">${escapeHtml(c.n)}</span></li>`;
+      }
+      const isNew = c.s === "new";
+      const pill  = isNew ? `<span class="new-pill">NEW</span>` : "";
+      const nameClass = "col-name" + (isNew ? " coll-name-new" : "");
+      const m = metricsHtml(c.n);
+      return `<li class="${isNew ? 'new' : ''}">${pill}<span class="${nameClass}">${escapeHtml(c.n)}</span>${m}</li>`;
     }).join("");
+    return items;
   }
   function count2026(arr) { return (arr || []).filter(c => c && (c.s === "kept" || c.s === "new")).length; }
   function countNew(arr)  { return (arr || []).filter(c => c && c.s === "new").length; }
@@ -320,30 +769,39 @@
       : "";
     const deltaBits = [];
     if (nbN) deltaBits.push(`<span class="tag-new" style="margin-left:0;">+${nbN} NEW 2026</span>`);
-    if (nbR) deltaBits.push(`<span style="color:#b33; font-size:11px;">−${nbR} retiré${nbR>1?"s":""}</span>`);
+    if (nbR) deltaBits.push(`<span style="color:#B8362A; font-size:11px;">−${nbR} retiré${nbR>1?"s":""}</span>`);
     const delta = deltaBits.length ? ` · ${deltaBits.join(" · ")}` : "";
-    const titleStyle = p.lycee_retired_2026 ? 'color:#b33; text-decoration:line-through;' : '';
+    const titleStyle = p.lycee_retired_2026 ? 'color:#B8362A; text-decoration:line-through;' : 'color:#171724;';
     return `
-      <div style="max-width:360px;">
-        <div style="font-weight:800; margin-bottom:4px; ${titleStyle}">${escapeHtml(p.lycee_csv)}</div>
-        <div style="font-size:12px; color:#555;">
+      <div style="max-width:360px; font-family:'IBM Plex Sans',sans-serif;">
+        <div style="font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:20px; line-height:1.15; letter-spacing:-.01em; margin-bottom:6px; ${titleStyle}">${escapeHtml(p.lycee_csv)}</div>
+        <div style="font-size:12px; color:#3A3946; line-height:1.5;">
           ${escapeHtml(p.nom_etablissement || "")}<br/>
-          <span style="color:#666;">${escapeHtml(p.adresse || "")}</span><br/>
-          <span style="color:#666;">UAI: ${escapeHtml(p.code_uai || "")}</span>
+          <span style="color:#6E6D7B;">${escapeHtml(p.adresse || "")}</span><br/>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#6E6D7B;">UAI ${escapeHtml(p.code_uai || "")}</span>
         </div>
         ${retiredBanner}
-        <div style="font-size:12px; color:#555; margin-top:8px;">Collèges secteur 1 2026 (n=${nb})${delta}</div>
-        <ul style="margin:6px 0 0; padding-left:18px; max-height:220px; overflow:auto;">${items}</ul>
+        <div style="font-size:11px; color:#6E6D7B; margin-top:10px; padding-top:8px; border-top:1px solid #EDE9DF; font-variant-numeric: tabular-nums;">Collèges secteur 1 2026 — <strong style="color:#171724; font-weight:600;">${nb}</strong>${delta}</div>
+        <ul class="diff-list" style="margin:4px 0 0; max-height:260px; overflow:auto;">${items}</ul>
       </div>`;
   }
 
-  // Icône rouge pour les lycées retirés du secteur 1 en 2026
+  // Marqueur indigo FCPE avec point vert au centre (par défaut pour les lycées actifs)
+  const lyceeIcon = L.divIcon({
+    className: 'lycee-marker',
+    html: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.27 0 0 6.27 0 14c0 9.6 11.6 20 13.3 21.5.4.3 1 .3 1.4 0C16.4 34 28 23.6 28 14 28 6.27 21.73 0 14 0z" fill="#3D348B" stroke="#fff" stroke-width="2"/><circle cx="14" cy="14" r="5" fill="#86C440"/></svg>',
+    iconSize: [28, 36],
+    iconAnchor: [14, 34],
+    popupAnchor: [0, -32]
+  });
+
+  // Icône rouge pour les lycées retirés du secteur 1 en 2026 (RABELAIS)
   const retiredIcon = L.divIcon({
-    className: 'retired-marker',
-    html: '<div style="width:18px;height:18px;border-radius:50%;background:#b33;border:3px solid #fff;box-shadow:0 0 0 1px #b33, 0 2px 6px rgba(0,0,0,.35);"></div>',
-    iconSize: [18,18],
-    iconAnchor: [9,9],
-    popupAnchor: [0,-10]
+    className: 'retired-marker lycee-marker',
+    html: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.27 0 0 6.27 0 14c0 9.6 11.6 20 13.3 21.5.4.3 1 .3 1.4 0C16.4 34 28 23.6 28 14 28 6.27 21.73 0 14 0z" fill="#B8362A" stroke="#fff" stroke-width="2"/><line x1="8" y1="14" x2="20" y2="14" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>',
+    iconSize: [28, 36],
+    iconAnchor: [14, 34],
+    popupAnchor: [0, -32]
   });
 
   const markersByLycee = new Map();
@@ -352,7 +810,7 @@
       if (feature.properties && feature.properties.lycee_retired_2026) {
         return L.marker(latlng, { icon: retiredIcon, opacity: 0.95 });
       }
-      return L.marker(latlng);
+      return L.marker(latlng, { icon: lyceeIcon });
     },
     onEachFeature: (feature, leafletLayer) => {
       const p = feature.properties;
@@ -383,7 +841,7 @@
     const cols = (LYCEE_TO_COLLEGES[lycee] || []);
     if (!cols.length) return "";
     const items = renderCollItems(cols);
-    return `<ul style="margin-top:8px; max-height:160px; overflow:auto;">${items}</ul>`;
+    return `<ul class="diff-list" style="margin-top:8px; max-height:200px; overflow:auto;">${items}</ul>`;
   }
 
   function isMobile() {
@@ -509,7 +967,7 @@
               <button data-action="map" ${hasGeo ? "" : "disabled"}>Map</button>
               <button data-action="clear">Désélectionner</button>
             </div>
-            <ul style="max-height:220px; overflow:auto; margin:0; padding-left:18px;">${items}</ul>
+            <ul class="diff-list" style="max-height:260px; overflow:auto; margin:0;">${items}</ul>
           `;
           // Bind actions
           const bMap   = detail.querySelector('[data-action="map"]');
@@ -551,7 +1009,7 @@
           <div class="inlineDetail">
             ${retiredLine}
             <div class="sub">Collèges secteur 1 2026 : <strong>${nb2026}</strong>${diffStr}</div>
-            <ul style="max-height:260px; overflow:auto; margin:0; padding-left:18px;">${items}</ul>
+            <ul class="diff-list" style="max-height:300px; overflow:auto; margin:0;">${items}</ul>
           </div>
         `;
       })() : "";
